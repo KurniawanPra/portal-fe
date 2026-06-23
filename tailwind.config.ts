@@ -1,16 +1,51 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
+  darkMode: "class",
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        navy: { 
+          600: '#1e3a8a', 
+          700: '#172554', 
+          800: '#0f172a' 
+        },
+      },
+      keyframes: {
+        'fade-up': { 
+          '0%': { opacity: '0', transform: 'translateY(16px)' }, 
+          '100%': { opacity: '1', transform: 'translateY(0)' } 
+        },
+        shimmer: { 
+          '0%': { backgroundPosition: '0% 50%' }, 
+          '100%': { backgroundPosition: '200% 50%' } 
+        },
+        'slide-in': {
+          '0%': { opacity: '0', transform: 'translateX(-12px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        'scale-in': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+      },
+      animation: {
+        'fade-up': 'fade-up 0.7s cubic-bezier(0.16,1,0.3,1) both',
+        shimmer: 'shimmer 3s linear infinite',
+        'slide-in': 'slide-in 0.3s ease-out both',
+        'scale-in': 'scale-in 0.2s ease-out both',
+        'fade-in': 'fade-in 0.3s ease-out both',
       },
     },
   },
