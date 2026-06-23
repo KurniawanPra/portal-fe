@@ -154,9 +154,10 @@ export default function LoginCard() {
           <LiquidButton
             type="button"
             variant="outline"
+            size="login"
             onClick={handleSubmit}
             disabled={loading}
-            className="flex w-full items-center justify-center rounded-2xl px-4 py-3.5 text-sm font-bold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+            className="flex w-full items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
           >
             {loading ? (
               <span className="flex items-center gap-2">

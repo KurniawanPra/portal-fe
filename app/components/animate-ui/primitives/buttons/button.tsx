@@ -21,6 +21,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <Component
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ref={ref as any}
         whileTap={{ scale: tapScale }}
         whileHover={{ scale: hoverScale }}

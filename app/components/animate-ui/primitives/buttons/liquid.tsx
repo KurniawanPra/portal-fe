@@ -30,6 +30,7 @@ const LiquidButton = React.forwardRef<HTMLButtonElement, LiquidButtonProps>(
 
     return (
       <Component
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ref={ref as any}
         whileTap={{ scale: tapScale }}
         whileHover={{
