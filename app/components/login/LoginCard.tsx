@@ -43,12 +43,12 @@ export default function LoginCard() {
 
   const fieldStyle = (name: string) =>
     focused === name
-      ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-[0_4px_20px_-4px_rgba(99,102,241,0.12)] bg-white/95 dark:bg-slate-900/90'
-      : 'border-slate-200/80 dark:border-slate-800/60 bg-white/60 dark:bg-slate-950/35 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white/80 dark:hover:bg-slate-950/50';
+      ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-[0_4px_20px_-4px_rgba(99,102,241,0.12)] bg-white dark:bg-slate-900'
+      : 'border-slate-200/80 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-950/30 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-950/40';
 
   return (
     <div className="w-full max-w-md animate-fade-up px-1 sm:px-0">
-      <div className="rounded-3xl border border-t-white/60 border-l-white/60 border-r-white/20 border-b-white/10 dark:border-t-white/25 dark:border-l-white/25 dark:border-r-white/10 dark:border-b-white/5 bg-gradient-to-br from-white/25 to-white/12 dark:from-[#121620]/25 dark:to-[#0f131a]/10 backdrop-filter backdrop-blur-3xl p-6 sm:p-10 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.18),0_16px_32px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.7),0_16px_32px_-8px_rgba(0,0,0,0.55)]">
+      <div className="rounded-3xl border border-slate-150/85 dark:border-slate-800/40 bg-white/98 dark:bg-[#11151f]/98 p-6 sm:p-10 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.14),0_16px_32px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6),0_16px_32px_-8px_rgba(0,0,0,0.4)]">
         {/* Title Block */}
         <div className="mb-6 sm:mb-8 text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Portal Apps</h2>
@@ -129,7 +129,7 @@ export default function LoginCard() {
                 className={`grid h-5 w-5 place-items-center rounded-md border transition-all duration-150 cursor-pointer focus:ring-2 focus:ring-indigo-500/20 focus:outline-none ${
                   remember
                     ? 'border-indigo-650 bg-indigo-650 text-white'
-                    : 'border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-950/35 hover:border-slate-400 dark:hover:border-slate-650'
+                    : 'border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950/40 hover:border-slate-450 dark:hover:border-slate-600'
                 }`}
               >
                 {remember && (
