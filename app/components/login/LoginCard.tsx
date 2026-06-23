@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 
 interface MessageState {
   type: 'error' | 'ok';
@@ -48,7 +49,7 @@ export default function LoginCard() {
 
   return (
     <div className="w-full max-w-md animate-fade-up px-1 sm:px-0">
-      <div className="rounded-3xl border border-slate-150/85 dark:border-slate-800/40 bg-white/98 dark:bg-[#11151f]/98 p-6 sm:p-10 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.14),0_16px_32px_-8px_rgba(15,23,42,0.08)] dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6),0_16px_32px_-8px_rgba(0,0,0,0.4)]">
+      <div className="rounded-3xl border border-white/10 border-t-white/35 border-l-white/35 dark:border-white/5 dark:border-t-white/20 dark:border-l-white/20 bg-white/10 dark:bg-slate-950/20 backdrop-filter backdrop-blur-md md:backdrop-blur-2xl ring-1 ring-white/10 dark:ring-white/5 p-6 sm:p-10 shadow-[0_32px_64px_rgba(15,23,42,0.18)] dark:shadow-[0_32px_64px_rgba(0,0,0,0.65)] relative overflow-hidden isolate transform-gpu">
         {/* Title Block */}
         <div className="mb-6 sm:mb-8 text-center">
           <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Portal Apps</h2>
@@ -150,11 +151,12 @@ export default function LoginCard() {
           </div>
 
           {/* Submit Button */}
-          <button
+          <LiquidButton
             type="button"
+            variant="outline"
             onClick={handleSubmit}
             disabled={loading}
-            className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 py-3.5 text-sm font-semibold text-white shadow-[0_4px_12px_rgba(79,70,229,0.2)] transition-all duration-200 hover:from-indigo-500 hover:to-indigo-600 hover:shadow-[0_6px_20px_rgba(79,70,229,0.3)] hover:scale-[1.01] active:scale-[0.99] cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
+            className="flex w-full items-center justify-center rounded-2xl px-4 py-3.5 text-sm font-bold cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none"
           >
             {loading ? (
               <span className="flex items-center gap-2">
@@ -164,7 +166,7 @@ export default function LoginCard() {
             ) : (
               'Masuk Ke Portal'
             )}
-          </button>
+          </LiquidButton>
         </div>
 
         {/* Divider */}
