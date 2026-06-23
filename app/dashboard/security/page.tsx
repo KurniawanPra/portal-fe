@@ -62,14 +62,14 @@ export default function SecurityPage() {
               <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
               <div>
                 <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">SSL Enkripsi Aktif</h4>
-                <p className="text-[10px] text-slate-500 dark:text-slate-455 font-semibold mt-0.5">Semua data sesi terenkripsi dengan aman secara online.</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Semua data sesi terenkripsi dengan aman secara online.</p>
               </div>
             </div>
             <div className="flex items-start gap-2.5">
               <CheckCircle className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
               <div>
                 <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Perangkat Saat Ini</h4>
-                <p className="text-[10px] text-slate-500 dark:text-slate-455 font-semibold mt-0.5">Otentikasi sukses menggunakan peramban internal berlisensi.</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">Otentikasi sukses menggunakan peramban internal berlisensi.</p>
               </div>
             </div>
           </div>

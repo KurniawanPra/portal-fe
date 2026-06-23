@@ -19,6 +19,11 @@ const config: Config = {
           DEFAULT: "var(--primary)",
           foreground: "var(--primary-foreground)",
         },
+        brand: {
+          DEFAULT: "rgba(var(--brand-rgb), <alpha-value>)",
+          hover: "rgba(var(--brand-hover-rgb), <alpha-value>)",
+          dark: "rgba(var(--brand-dark-rgb), <alpha-value>)",
+        },
         secondary: {
           DEFAULT: "var(--secondary)",
           foreground: "var(--secondary-foreground)",

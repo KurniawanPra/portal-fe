@@ -163,7 +163,7 @@ const getBrandButtonClass = (appName: string) => {
 // Generates app-specific brand colors for the authentication pills
 const getAuthBadgeClass = (appName: string, authMode: string) => {
   if (appName.includes('Google')) {
-    return 'bg-slate-100 dark:bg-slate-800/40 text-slate-700 dark:text-slate-350 border-slate-200 dark:border-slate-800/60';
+    return 'bg-slate-100 dark:bg-slate-800/40 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800/60';
   }
   if (appName.includes('YouTube')) {
     return 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-900/30';
@@ -208,7 +208,7 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
   return (
     <div className="w-full">
       {filteredApps.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/60 dark:border-slate-800/60 rounded-3xl p-8 transition-colors duration-300">
+        <div className="flex flex-col items-center justify-center py-16 text-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-slate-800/60 rounded-3xl p-8 transition-colors duration-300">
           <HelpCircle className="h-12 w-12 text-slate-300 dark:text-slate-700 animate-pulse" />
           <h3 className="mt-4 text-base font-bold text-slate-800 dark:text-slate-200">Aplikasi Tidak Ditemukan</h3>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-sm font-medium">
@@ -227,7 +227,7 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
               <div className="relative w-full rounded-3xl transition-transform duration-500 preserve-3d group-hover:[transform:rotateY(180deg)]">
                 
                 {/* Front Face: App Store Style Icon & Application Name */}
-                <div className="absolute inset-0 w-full h-full rounded-3xl border border-white/60 dark:border-slate-800/35 bg-white/70 dark:bg-[#161b26]/70 backdrop-blur-xl shadow-sm flex flex-col items-center justify-center p-4 backface-hidden">
+                <div className="absolute inset-0 w-full h-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white/70 dark:bg-[#161b26]/70 backdrop-blur-xl shadow-sm flex flex-col items-center justify-center p-4 backface-hidden">
                   <AppIcon name={app.icon} />
                   <span className="mt-2.5 text-xs sm:text-sm font-extrabold tracking-tight text-slate-800 dark:text-slate-200 text-center truncate w-full px-2">
                     {app.nama}
@@ -235,7 +235,7 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
                 </div>
 
                 {/* Back Face: Redesigned Layout with Header, Body, and Footer */}
-                <div className="relative w-full rounded-3xl border border-white/60 dark:border-slate-800/35 bg-white/95 dark:bg-[#131924]/95 backdrop-blur-xl shadow-lg p-4 flex flex-col justify-between backface-hidden rotate-y-180 min-h-[10rem] gap-2">
+                <div className="relative w-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-[#131924]/95 backdrop-blur-xl shadow-lg p-4 flex flex-col justify-between backface-hidden rotate-y-180 min-h-[10rem] gap-2">
                   
                   {/* 1. Header (Full Width Title and Subtitle) */}
                   <div className="min-w-0">

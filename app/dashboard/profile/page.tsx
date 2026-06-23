@@ -64,18 +64,18 @@ export default function ProfilePage() {
 
           <div className="mt-6 w-full border-t border-slate-100 dark:border-slate-800 pt-5 space-y-3">
             <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-500 dark:text-slate-455">Status Kepegawaian</span>
+              <span className="font-semibold text-slate-500 dark:text-slate-400">Status Kepegawaian</span>
               <span className="rounded-full bg-indigo-50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 px-2.5 py-0.5 font-bold text-indigo-700 dark:text-indigo-400">
                 {MOCK_EMPLOYEE.status_karyawan.label}
               </span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-500 dark:text-slate-455">Pendidikan Terakhir</span>
-              <span className="font-bold text-slate-700 dark:text-slate-350">{MOCK_EMPLOYEE.pendidikan.label}</span>
+              <span className="font-semibold text-slate-500 dark:text-slate-400">Pendidikan Terakhir</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">{MOCK_EMPLOYEE.pendidikan.label}</span>
             </div>
             <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-slate-500 dark:text-slate-455">Status Pernikahan</span>
-              <span className="font-bold text-slate-700 dark:text-slate-350">{MOCK_EMPLOYEE.status_pernikahan.label}</span>
+              <span className="font-semibold text-slate-500 dark:text-slate-400">Status Pernikahan</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">{MOCK_EMPLOYEE.status_pernikahan.label}</span>
             </div>
           </div>
         </div>

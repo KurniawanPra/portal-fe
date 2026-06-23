@@ -7,6 +7,8 @@ export interface HoleBackgroundProps extends React.ComponentPropsWithoutRef<'div
   numberOfLines?: number;
   numberOfDiscs?: number;
   particleRGBColor?: [number, number, number];
+  /** Reduce render resolution and frame rate for low-end devices */
+  lowEndMode?: boolean;
 }
 
 interface Particle {
@@ -24,6 +26,7 @@ export function HoleBackground({
   numberOfLines = 50,
   numberOfDiscs = 50,
   particleRGBColor = [255, 255, 255],
+  lowEndMode = false,
   className,
   ...props
 }: HoleBackgroundProps) {
@@ -70,31 +73,46 @@ export function HoleBackground({
 
     // Create particles orbiting the black hole
     const maxRadius = Math.sqrt(width * width + height * height);
-    const particleCount = 120;
+    // Low-end: half the particle count
+    const particleCount = lowEndMode ? 60 : 120;
     const particles: Particle[] = Array.from({ length: particleCount }, () => {
       const r = Math.random() * maxRadius + 20;
       return {
         r,
         theta: Math.random() * Math.PI * 2,
-        vr: Math.random() * 0.4 + 0.2, // Radial speed inward
-        vTheta: (Math.random() * 0.005 + 0.002) * (Math.random() > 0.5 ? 1 : -1), // Angular speed
+        vr: Math.random() * 0.4 + 0.2,
+        vTheta: (Math.random() * 0.005 + 0.002) * (Math.random() > 0.5 ? 1 : -1),
         size: Math.random() * 2.2 + 1.0,
         alpha: Math.random() * 0.6 + 0.4,
-        type: Math.random() > 0.35 ? 'tech' : 'brand', // mix brand (amber/orange) and tech (white/indigo)
+        type: Math.random() > 0.35 ? 'tech' : 'brand',
       };
     });
 
     let time = 0;
+    // Frame skip counter for 30fps throttle on low-end
+    let frameSkip = 0;
+    // Cache isDark to avoid DOM query every frame
+    let isDark = document.documentElement.classList.contains('dark');
+    const darkObserver = new MutationObserver(() => {
+      isDark = document.documentElement.classList.contains('dark');
+    });
+    darkObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
 
     const render = () => {
-      time += 0.01;
+      animationFrameId = requestAnimationFrame(render);
+
+      // Low-end: skip every other frame (target ~30fps)
+      if (lowEndMode) {
+        frameSkip++;
+        if (frameSkip % 2 !== 0) return;
+      }
+
+      time += lowEndMode ? 0.02 : 0.01;
       ctx.clearRect(0, 0, width, height);
 
       // Smooth mouse movement
       mouse.x += (mouse.targetX - mouse.x) * 0.08;
       mouse.y += (mouse.targetY - mouse.y) * 0.08;
-
-      const isDark = document.documentElement.classList.contains('dark');
 
       // Draw background
       ctx.fillStyle = isDark ? '#0b0f17' : '#f8fafc';
@@ -135,63 +153,46 @@ export function HoleBackground({
       };
 
       // 1. Draw Concentric Discs
-      const discSpacing = R_max / numberOfDiscs;
-      for (let i = 1; i <= numberOfDiscs; i++) {
+      // Low-end: fewer discs and half segment resolution
+      const discsToDraw = lowEndMode ? Math.ceil(numberOfDiscs / 2) : numberOfDiscs;
+      const discSpacing = R_max / discsToDraw;
+      const segments = lowEndMode ? 36 : 72;
+      for (let i = 1; i <= discsToDraw; i++) {
         const baseR = i * discSpacing;
         ctx.beginPath();
         let isDrawing = false;
-        
-        // 72 segments (5 degrees each) to draw the circular contour smoothly
-        const segments = 72;
         for (let s = 0; s <= segments; s++) {
           const angle = (s * Math.PI * 2) / segments;
-          
-          // Twist and warp calculations
           const twist = getTwistAngle(baseR);
           const warp = getWarpFactor(baseR);
-          
           const finalAngle = angle + twist;
           const finalR = baseR * warp;
-          
           const x = holeX + finalR * Math.cos(finalAngle);
           const y = holeY + finalR * Math.sin(finalAngle);
-
-          if (!isDrawing) {
-            ctx.moveTo(x, y);
-            isDrawing = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
+          if (!isDrawing) { ctx.moveTo(x, y); isDrawing = true; }
+          else { ctx.lineTo(x, y); }
         }
         ctx.stroke();
       }
 
       // 2. Draw Radial Lines
-      for (let j = 0; j < numberOfLines; j++) {
-        const baseAngle = (j * Math.PI * 2) / numberOfLines;
+      // Low-end: fewer lines and fewer steps per line
+      const linesToDraw = lowEndMode ? Math.ceil(numberOfLines / 2) : numberOfLines;
+      const steps = lowEndMode ? 20 : 40;
+      for (let j = 0; j < linesToDraw; j++) {
+        const baseAngle = (j * Math.PI * 2) / linesToDraw;
         ctx.beginPath();
         let isDrawing = false;
-
-        // Draw segmented line from core to outer edge
-        const steps = 40;
         for (let k = 0; k <= steps; k++) {
           const baseR = (k * R_max) / steps;
-          
           const twist = getTwistAngle(baseR);
           const warp = getWarpFactor(baseR);
-          
           const finalAngle = baseAngle + twist;
           const finalR = baseR * warp;
-          
           const x = holeX + finalR * Math.cos(finalAngle);
           const y = holeY + finalR * Math.sin(finalAngle);
-
-          if (!isDrawing) {
-            ctx.moveTo(x, y);
-            isDrawing = true;
-          } else {
-            ctx.lineTo(x, y);
-          }
+          if (!isDrawing) { ctx.moveTo(x, y); isDrawing = true; }
+          else { ctx.lineTo(x, y); }
         }
         ctx.stroke();
       }
@@ -236,10 +237,10 @@ export function HoleBackground({
             g = 158;
             b = 11;
           } else if (!isDark) {
-            // Override tech particles to contrasty indigo color in light mode
-            r = 79;
-            g = 70;
-            b = 229;
+            // Override tech particles to golden amber color in light mode
+            r = 217;
+            g = 119;
+            b = 6;
           }
           ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.alpha * fade * (isDark ? 0.95 : 0.8)})`;
           ctx.fill();
@@ -254,14 +255,14 @@ export function HoleBackground({
       if (isDark) {
         gradient.addColorStop(0, 'rgba(245, 158, 11, 0.7)'); // Center glow is warm golden amber
         gradient.addColorStop(0.2, 'rgba(239, 68, 68, 0.4)'); // Reddish orange transition
-        gradient.addColorStop(0.45, 'rgba(99, 102, 241, 0.28)'); // Indigo gravity field
-        gradient.addColorStop(0.7, 'rgba(139, 92, 246, 0.1)'); // Violet outer fade
+        gradient.addColorStop(0.45, 'rgba(245, 158, 11, 0.25)'); // Golden Amber gravity field
+        gradient.addColorStop(0.7, 'rgba(217, 119, 6, 0.08)'); // Darker Amber outer fade
         gradient.addColorStop(1, 'rgba(11, 15, 23, 0)');
       } else {
         gradient.addColorStop(0, 'rgba(245, 158, 11, 0.5)'); // Golden amber center
         gradient.addColorStop(0.2, 'rgba(249, 115, 22, 0.3)'); // Orange transition
-        gradient.addColorStop(0.45, 'rgba(79, 70, 229, 0.22)'); // Indigo gravity field
-        gradient.addColorStop(0.7, 'rgba(139, 92, 246, 0.08)'); // Violet outer fade
+        gradient.addColorStop(0.45, 'rgba(217, 119, 6, 0.18)'); // Golden Amber gravity field
+        gradient.addColorStop(0.7, 'rgba(245, 158, 11, 0.05)'); // Lighter Amber outer fade
         gradient.addColorStop(1, 'rgba(248, 250, 252, 0)');
       }
       
@@ -279,20 +280,20 @@ export function HoleBackground({
       ctx.fill();
       ctx.stroke();
 
-      animationFrameId = requestAnimationFrame(render);
     };
 
     render();
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      darkObserver.disconnect();
       if (container) {
         container.removeEventListener('mousemove', handleMouseMove);
         container.removeEventListener('mouseleave', handleMouseLeave);
       }
       cancelAnimationFrame(animationFrameId);
     };
-  }, [strokeColor, numberOfLines, numberOfDiscs, particleRGBColor]);
+  }, [strokeColor, numberOfLines, numberOfDiscs, particleRGBColor, lowEndMode]);
 
   return (
     <div ref={containerRef} className={className} {...props}>

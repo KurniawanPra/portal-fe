@@ -155,3 +155,67 @@ html {
     @apply font-sans;
   }
 }
+
+@media (max-height: 760px) {
+  .login-card-container {
+    padding-top: 3.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+  .login-card-wrapper {
+    padding: 1.5rem 2rem !important;
+    border-radius: 1.5rem !important;
+  }
+  .login-card-title-block {
+    margin-bottom: 0.75rem !important;
+  }
+  .login-card-title-text {
+    font-size: 1.25rem !important;
+  }
+  .login-card-fields-spacing {
+    margin-bottom: 0.5rem !important;
+    gap: 0.5rem !important;
+  }
+  .login-card-input {
+    padding-top: 0.55rem !important;
+    padding-bottom: 0.55rem !important;
+    border-radius: 0.85rem !important;
+  }
+  .login-card-button {
+    height: 2.75rem !important;
+    border-radius: 0.85rem !important;
+  }
+  .login-card-security-badge {
+    margin-top: 0.75rem !important;
+  }
+  .login-header {
+    top: 0.75rem !important;
+    left: 0.75rem !important;
+    padding: 0.35rem 0.75rem !important;
+  }
+  .login-header img {
+    height: 2.25rem !important;
+    width: 2.25rem !important;
+  }
+  .login-header span {
+    font-size: 0.75rem !important;
+  }
+  .login-header span:last-child {
+    font-size: 8px !important;
+  }
+  .login-quick-actions {
+    top: 0.75rem !important;
+    right: 0.75rem !important;
+  }
+}
+
+@media (max-height: 480px) {
+  .login-header {
+    display: none !important;
+  }
+  .login-quick-actions {
+    display: none !important;
+  }
+  .login-card-container {
+    padding-top: 0.5rem !important;
+  }
+}

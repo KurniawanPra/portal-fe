@@ -153,7 +153,7 @@ export function ThemeTogglerButton({
             onClick={() => handleModeChange(mode)}
             className={`relative z-10 flex flex-1 items-center justify-center cursor-pointer transition-colors duration-300 ${pillRounding} ${
               isSelected
-                ? 'text-indigo-650 dark:text-indigo-400 font-bold'
+                ? 'text-amber-600 dark:text-amber-500 font-bold'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
             } ${sizeClasses.button} focus:outline-none`}
             title={mode.charAt(0).toUpperCase() + mode.slice(1)}

@@ -23,7 +23,7 @@ const buttonVariants = cva(
         ghost:
           '[--liquid-button-background-color:var(--transparent)] [--liquid-button-color:var(--primary)] text-primary hover:text-primary-foreground shadow-xs',
         outline:
-          'border border-indigo-600/35 dark:border-indigo-500/20 [--liquid-button-background-color:transparent] [--liquid-button-color:#4f46e5] dark:[--liquid-button-color:#818cf8] text-indigo-650 dark:text-indigo-400 hover:text-white dark:hover:text-slate-950 shadow-sm transition-[box-shadow,_border-color,_outline-color] hover:border-transparent dark:hover:border-transparent',
+          'border border-amber-500/35 dark:border-amber-500/20 [--liquid-button-background-color:transparent] [--liquid-button-color:#d97706] dark:[--liquid-button-color:#fbbf24] text-amber-600 dark:text-amber-400 hover:text-white dark:hover:text-slate-950 shadow-sm transition-[box-shadow,_border-color,_outline-color] hover:border-transparent dark:hover:border-transparent',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',
