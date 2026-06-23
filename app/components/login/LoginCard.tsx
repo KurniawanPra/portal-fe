@@ -43,17 +43,17 @@ export default function LoginCard() {
 
   const fieldStyle = (name: string) =>
     focused === name
-      ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-[0_4px_20px_-4px_rgba(99,102,241,0.12)] bg-white'
-      : 'border-slate-200/80 bg-slate-50/30 hover:border-slate-300 hover:bg-slate-50/60';
+      ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-[0_4px_20px_-4px_rgba(99,102,241,0.12)] bg-white/95 dark:bg-slate-900/90'
+      : 'border-slate-200/80 dark:border-slate-800/60 bg-white/60 dark:bg-slate-950/35 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white/80 dark:hover:bg-slate-950/50';
 
   return (
     <div className="w-full max-w-md animate-fade-up px-1 sm:px-0">
-      <div className="rounded-3xl border border-white/60 bg-white/70 backdrop-blur-xl p-6 sm:p-10 shadow-[0_24px_48px_-12px_rgba(15,23,42,0.08)]">
+      <div className="rounded-3xl border border-t-white/60 border-l-white/60 border-r-white/20 border-b-white/10 dark:border-t-white/25 dark:border-l-white/25 dark:border-r-white/10 dark:border-b-white/5 bg-gradient-to-br from-white/25 to-white/12 dark:from-[#121620]/25 dark:to-[#0f131a]/10 backdrop-filter backdrop-blur-3xl p-6 sm:p-10 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.18),0_16px_32px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.7),0_16px_32px_-8px_rgba(0,0,0,0.55)]">
         {/* Title Block */}
         <div className="mb-6 sm:mb-8 text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Portal Apps</h2>
-          <p className="text-sm font-semibold tracking-wide text-indigo-600 mt-1 uppercase">PT. Industri Nabati Lestari</p>
-          <p className="mt-2 text-sm text-slate-600 leading-relaxed">
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Portal Apps</h2>
+          <p className="text-sm font-semibold tracking-wide text-indigo-650 dark:text-indigo-400 mt-1 uppercase">PT. Industri Nabati Lestari</p>
+          <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-300 leading-relaxed">
             Gunakan akun portal Anda untuk mengakses seluruh aplikasi terintegrasi secara aman.
           </p>
         </div>
@@ -79,7 +79,7 @@ export default function LoginCard() {
         {/* Input Fields */}
         <div className="space-y-4">
           <div>
-            <label className="mb-1.5 sm:mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600">
+            <label className="mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Username atau Email
             </label>
             <input
@@ -90,12 +90,12 @@ export default function LoginCard() {
               onBlur={() => setFocused(null)}
               placeholder="nama@inl.co.id"
               autoComplete="username"
-              className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 ${fieldStyle('user')}`}
+              className={`w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 dark:text-slate-200 outline-none transition-all duration-200 placeholder:text-slate-450 dark:placeholder:text-slate-550 ${fieldStyle('user')}`}
             />
           </div>
 
           <div>
-            <label className="mb-1.5 sm:mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-600">
+            <label className="mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Password
             </label>
             <div className="relative">
@@ -107,12 +107,12 @@ export default function LoginCard() {
                 onBlur={() => setFocused(null)}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className={`w-full rounded-2xl border px-4 py-3 pr-11 text-sm text-slate-800 outline-none transition-all duration-200 placeholder:text-slate-400 ${fieldStyle('pw')}`}
+                className={`w-full rounded-2xl border px-4 py-3 pr-11 text-sm text-slate-800 dark:text-slate-200 outline-none transition-all duration-200 placeholder:text-slate-450 dark:placeholder:text-slate-550 ${fieldStyle('pw')}`}
               />
               <button
                 type="button"
                 onClick={() => setShowPw((s) => !s)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600 focus:outline-none cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 transition-colors hover:text-slate-650 dark:hover:text-slate-300 focus:outline-none cursor-pointer"
                 aria-label={showPw ? 'Sembunyikan password' : 'Tampilkan password'}
               >
                 {showPw ? <EyeOff className="h-4.5 w-4.5" /> : <Eye className="h-4.5 w-4.5" />}
@@ -122,14 +122,14 @@ export default function LoginCard() {
 
           {/* Remember Me & Forgot Password */}
           <div className="flex items-center justify-between pt-1 pb-2">
-            <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm font-medium text-slate-600">
+            <label className="flex cursor-pointer select-none items-center gap-2.5 text-sm font-semibold text-slate-700 dark:text-slate-305">
               <button
                 type="button"
                 onClick={() => setRemember((r) => !r)}
                 className={`grid h-5 w-5 place-items-center rounded-md border transition-all duration-150 cursor-pointer focus:ring-2 focus:ring-indigo-500/20 focus:outline-none ${
                   remember
-                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                    : 'border-slate-300 bg-white hover:border-slate-400'
+                    ? 'border-indigo-650 bg-indigo-650 text-white'
+                    : 'border-slate-300 dark:border-slate-700 bg-white/50 dark:bg-slate-950/35 hover:border-slate-400 dark:hover:border-slate-650'
                 }`}
               >
                 {remember && (
@@ -143,7 +143,7 @@ export default function LoginCard() {
             <button
               type="button"
               onClick={() => setMessage({ type: 'ok', text: 'Link reset password telah dikirim ke email Anda.' })}
-              className="text-sm font-semibold text-indigo-600 transition-colors hover:text-indigo-800 cursor-pointer focus:outline-none focus:underline"
+              className="text-sm font-bold text-indigo-650 dark:text-indigo-400 transition-colors hover:text-indigo-850 dark:hover:text-indigo-300 cursor-pointer focus:outline-none focus:underline"
             >
               Lupa password?
             </button>
@@ -175,8 +175,8 @@ export default function LoginCard() {
         </div> */}
 
         {/* Security Badge */}
-        <div className="mt-6 pt-1 flex items-center justify-center gap-1.5 text-xs text-slate-500">
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <div className="mt-6 pt-1 flex items-center justify-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2.5">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>

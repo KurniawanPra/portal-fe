@@ -16,6 +16,7 @@ interface Particle {
   vTheta: number;
   size: number;
   alpha: number;
+  type?: 'tech' | 'brand';
 }
 
 export function HoleBackground({
@@ -69,7 +70,7 @@ export function HoleBackground({
 
     // Create particles orbiting the black hole
     const maxRadius = Math.sqrt(width * width + height * height);
-    const particleCount = 80;
+    const particleCount = 120;
     const particles: Particle[] = Array.from({ length: particleCount }, () => {
       const r = Math.random() * maxRadius + 20;
       return {
@@ -77,8 +78,9 @@ export function HoleBackground({
         theta: Math.random() * Math.PI * 2,
         vr: Math.random() * 0.4 + 0.2, // Radial speed inward
         vTheta: (Math.random() * 0.005 + 0.002) * (Math.random() > 0.5 ? 1 : -1), // Angular speed
-        size: Math.random() * 1.5 + 0.8,
-        alpha: Math.random() * 0.5 + 0.3,
+        size: Math.random() * 2.2 + 1.0,
+        alpha: Math.random() * 0.6 + 0.4,
+        type: Math.random() > 0.35 ? 'tech' : 'brand', // mix brand (amber/orange) and tech (white/indigo)
       };
     });
 
@@ -108,7 +110,7 @@ export function HoleBackground({
       // Compute responsive theme stroke color
       let finalStrokeColor = strokeColor;
       if (strokeColor === '#737373') {
-        finalStrokeColor = isDark ? 'rgba(148, 163, 184, 0.12)' : 'rgba(100, 116, 139, 0.07)';
+        finalStrokeColor = isDark ? 'rgba(165, 180, 252, 0.22)' : 'rgba(79, 70, 229, 0.16)';
       }
       ctx.strokeStyle = finalStrokeColor;
 
@@ -223,27 +225,48 @@ export function HoleBackground({
           const fade = Math.min((p.r - 12) / 40, 1); // Fade out as it reaches the center core
           ctx.beginPath();
           ctx.arc(px, py, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(${particleRGBColor[0]}, ${particleRGBColor[1]}, ${particleRGBColor[2]}, ${p.alpha * fade})`;
+          
+          let r = particleRGBColor[0];
+          let g = particleRGBColor[1];
+          let b = particleRGBColor[2];
+          
+          if (p.type === 'brand') {
+            // Palm Oil Golden/Amber color matching PT INL portal style
+            r = 245;
+            g = 158;
+            b = 11;
+          } else if (!isDark) {
+            // Override tech particles to contrasty indigo color in light mode
+            r = 79;
+            g = 70;
+            b = 229;
+          }
+          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${p.alpha * fade * (isDark ? 0.95 : 0.8)})`;
           ctx.fill();
         }
       });
 
       // 4. Draw Core Gravity Well Singularity
       const pulse = 1 + Math.sin(time * 3) * 0.08;
-      const gradient = ctx.createRadialGradient(holeX, holeY, 2, holeX, holeY, 65 * pulse);
+      const glowRadius = 130 * pulse;
+      const gradient = ctx.createRadialGradient(holeX, holeY, 2, holeX, holeY, glowRadius);
       
       if (isDark) {
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
-        gradient.addColorStop(0.3, 'rgba(139, 92, 246, 0.18)');
+        gradient.addColorStop(0, 'rgba(245, 158, 11, 0.7)'); // Center glow is warm golden amber
+        gradient.addColorStop(0.2, 'rgba(239, 68, 68, 0.4)'); // Reddish orange transition
+        gradient.addColorStop(0.45, 'rgba(99, 102, 241, 0.28)'); // Indigo gravity field
+        gradient.addColorStop(0.7, 'rgba(139, 92, 246, 0.1)'); // Violet outer fade
         gradient.addColorStop(1, 'rgba(11, 15, 23, 0)');
       } else {
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.22)');
-        gradient.addColorStop(0.3, 'rgba(139, 92, 246, 0.1)');
+        gradient.addColorStop(0, 'rgba(245, 158, 11, 0.5)'); // Golden amber center
+        gradient.addColorStop(0.2, 'rgba(249, 115, 22, 0.3)'); // Orange transition
+        gradient.addColorStop(0.45, 'rgba(79, 70, 229, 0.22)'); // Indigo gravity field
+        gradient.addColorStop(0.7, 'rgba(139, 92, 246, 0.08)'); // Violet outer fade
         gradient.addColorStop(1, 'rgba(248, 250, 252, 0)');
       }
       
       ctx.beginPath();
-      ctx.arc(holeX, holeY, 65 * pulse, 0, Math.PI * 2);
+      ctx.arc(holeX, holeY, glowRadius, 0, Math.PI * 2);
       ctx.fillStyle = gradient;
       ctx.fill();
 
@@ -251,7 +274,7 @@ export function HoleBackground({
       ctx.beginPath();
       ctx.arc(holeX, holeY, 7, 0, Math.PI * 2);
       ctx.fillStyle = isDark ? '#121620' : '#ffffff';
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.6)';
+      ctx.strokeStyle = isDark ? 'rgba(245, 158, 11, 0.85)' : 'rgba(249, 115, 22, 0.85)';
       ctx.lineWidth = 2.5;
       ctx.fill();
       ctx.stroke();
