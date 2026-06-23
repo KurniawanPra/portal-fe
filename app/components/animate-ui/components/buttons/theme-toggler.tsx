@@ -26,9 +26,9 @@ export function ThemeTogglerButton({
     
     // Fallback if system mode is not in the allowed modes list
     const finalMode = modes.includes(initialMode) ? initialMode : modes[0];
-    
     setActiveMode(finalMode);
     applyTheme(finalMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

@@ -212,7 +212,7 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
           <HelpCircle className="h-12 w-12 text-slate-300 dark:text-slate-700 animate-pulse" />
           <h3 className="mt-4 text-base font-bold text-slate-800 dark:text-slate-200">Aplikasi Tidak Ditemukan</h3>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 max-w-sm font-medium">
-            Tidak ada aplikasi aktif yang cocok dengan kata pencarian "{searchQuery}". Silakan coba kata kunci lain.
+            Tidak ada aplikasi aktif yang cocok dengan kata pencarian &quot;{searchQuery}&quot;. Silakan coba kata kunci lain.
           </p>
         </div>
       ) : (

@@ -32,14 +32,14 @@ export default function LoginCard() {
     }, 1200);
   };
 
-  const ssoLogin = (provider: string) => {
-    console.log('[Portal PT INL] SSO via', provider);
-    setMessage({ type: 'ok', text: `Login SSO via ${provider} sukses! (Simulasi sukses)` });
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
-  };
+  // const ssoLogin = (provider: string) => {
+  //   console.log('[Portal PT INL] SSO via', provider);
+  //   setMessage({ type: 'ok', text: `Login SSO via ${provider} sukses! (Simulasi sukses)` });
+  //   setLoading(true);
+  //   setTimeout(() => {
+  //     setLoading(false);
+  //   }, 1000);
+  // };
 
   const fieldStyle = (name: string) =>
     focused === name
