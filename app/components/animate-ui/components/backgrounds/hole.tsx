@@ -51,7 +51,7 @@ export function HoleBackground({
     window.addEventListener('resize', handleResize);
 
     // Mouse coordinates (default to center)
-    let mouse = { x: width / 2, y: height / 2, targetX: width / 2, targetY: height / 2 };
+    const mouse = { x: width / 2, y: height / 2, targetX: width / 2, targetY: height / 2 };
 
     const handleMouseMove = (e: MouseEvent) => {
       const rect = canvas.getBoundingClientRect();
