@@ -371,7 +371,7 @@ export default function ManajemenAplikasiPage() {
               </div>
               <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus Aplikasi?</h3>
               <p className="mt-2 text-sm text-slate-550 dark:text-slate-400 font-bold leading-relaxed">
-                Aplikasi <span className="font-extrabold text-slate-800 dark:text-slate-200">"{deleteTarget?.nama}"</span> akan dihapus permanen dari Portal SSO.
+                Aplikasi <span className="font-extrabold text-slate-800 dark:text-slate-200">&quot;{deleteTarget?.nama}&quot;</span> akan dihapus permanen dari Portal SSO.
               </p>
               <div className="mt-5 flex gap-3">
                 <button onClick={() => setDeleteTarget(null)}

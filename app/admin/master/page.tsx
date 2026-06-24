@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Building2, GitBranch, Briefcase, GraduationCap, Heart,
   Plus, Pencil, Trash2, X, CheckCircle2, AlertCircle, Search,
-  Check, ToggleLeft, ToggleRight, ChevronDown
+  ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
@@ -117,8 +117,8 @@ function DeleteModal({ open, name, onCancel, onConfirm }: { open:boolean; name:s
               <Trash2 className="h-5 w-5 text-rose-500 dark:text-rose-400"/>
             </div>
             <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus Data?</h3>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-              Data <span className="font-bold text-slate-800 dark:text-slate-200">"{name}"</span> akan dihapus permanen.
+            <p className="mt-2 text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
+              Data <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{name}&quot;</span> akan dihapus permanen.
             </p>
             <div className="mt-5 flex gap-3">
               <button onClick={onCancel} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all cursor-pointer">Batal</button>

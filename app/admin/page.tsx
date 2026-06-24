@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   LayoutGrid, Users, Shield, TrendingUp, AlertTriangle,
   CheckCircle2, Activity, Zap, Lock, ChevronLeft, ChevronRight,
@@ -63,7 +63,7 @@ const generateDailyLogs = (year: number, month: number): DailyLog[] => {
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
     const seed = year * 1000 + month * 32 + day;
     
-    const apps: Record<AppId, number> = {} as any;
+    const apps = {} as Record<AppId, number>;
     let total = 0;
     
     APPS.forEach((app, index) => {

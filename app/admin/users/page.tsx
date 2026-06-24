@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
-  Mail, Building2, Shield, UserX, UserCheck, ShieldCheck, UserMinus,
+  Mail, Building2, UserX, UserCheck, ShieldCheck,
   ShieldAlert, Phone
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
@@ -381,7 +381,7 @@ export default function ManajemenUserPage() {
               </div>
               <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus User?</h3>
               <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                User <span className="font-bold text-slate-800 dark:text-slate-200">"{deleteTarget?.nama}"</span> akan dihapus permanen dari sistem.
+                User <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{deleteTarget?.nama}&quot;</span> akan dihapus permanen dari sistem.
               </p>
               <div className="mt-5 flex gap-3">
                 <button onClick={() => setDeleteTarget(null)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>

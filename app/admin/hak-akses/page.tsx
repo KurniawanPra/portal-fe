@@ -145,7 +145,6 @@ export default function HakAksesPage() {
                         </td>
                         {(['Admin', 'User', 'Viewer'] as Role[]).map(role => {
                           const enabled = row.permissions[role];
-                          const c = ROLE_CONFIG[role];
                           return (
                             <td
                               key={role}
