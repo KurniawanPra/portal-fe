@@ -151,7 +151,7 @@ export default function LoginPage() {
 
           {/* Floating Audio Controller */}
           <div className="absolute bottom-4 right-4 z-30 flex items-center gap-3">
-            <audio ref={audioRef} src="/audio/ambient-corporate.mp3" loop preload="none" />
+            <audio ref={audioRef} src="/audio/lagu-login.mp3" loop preload="none" />
             <button
               onClick={togglePlay}
               className="flex items-center gap-2.5 rounded-full border border-white/20 dark:border-white/10 bg-white/20 dark:bg-black/35 backdrop-blur-md px-4 py-2 text-[10px] tracking-wider font-bold text-slate-800 dark:text-slate-250 shadow-md hover:bg-white/35 dark:hover:bg-black/45 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus:outline-none"
