@@ -128,7 +128,7 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
       logoMatRef.current.metalness = THREE.MathUtils.lerp(baseMetal, targetMetal, hoverFactor.current);
 
       if ('clearcoat' in logoMatRef.current) {
-        (logoMatRef.current as any).clearcoat = THREE.MathUtils.lerp(0.6, 0.95, hoverFactor.current);
+        (logoMatRef.current as THREE.MeshPhysicalMaterial).clearcoat = THREE.MathUtils.lerp(0.6, 0.95, hoverFactor.current);
       }
     }
   });
@@ -165,10 +165,8 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
               emissiveIntensity={0}
             />
           ) : (
-            /* High-end: realistic glossy physical material */
             <meshPhysicalMaterial
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ref={logoMatRef as any}
+              ref={logoMatRef as React.Ref<THREE.MeshPhysicalMaterial>}
               map={logoTexture}
               transparent={true}
               roughness={0.15}
