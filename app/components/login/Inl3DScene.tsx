@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, Suspense, useMemo } from 'react';
+import React, { useRef, Suspense, useMemo, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Float, Trail, useTexture, Sparkles } from '@react-three/drei';
 import * as THREE from 'three';
@@ -22,44 +22,207 @@ function usePerf() {
 /* -------------------------------------------------------------------------- */
 function LogoCenterpiece({ isLow }: { isLow: boolean }) {
   const logoTexture = useTexture('/img/inl3d.png');
-  const groupRef = useRef<THREE.Group>(null!);
+  const logoGroupRef = useRef<THREE.Group>(null!);
+  const ringRef = useRef<THREE.Mesh>(null!);
+  const ring2Ref = useRef<THREE.Mesh>(null!);
+  const ring3Ref = useRef<THREE.Mesh>(null!);
 
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    groupRef.current.rotation.y = Math.sin(t * 0.5) * 0.15;
-    groupRef.current.rotation.x = Math.sin(t * 0.35) * 0.08;
-    groupRef.current.rotation.z = Math.sin(t * 0.25) * 0.03;
+  const logoMatRef = useRef<THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial | null>(null);
+  const ringMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const ring2MatRef = useRef<THREE.MeshStandardMaterial | null>(null);
+  const ring3MatRef = useRef<THREE.MeshStandardMaterial | null>(null);
+
+  const [hovered, setHovered] = useState(false);
+  const hoverFactor = useRef(0);
+
+  // Keep track of accumulated rotations to prevent jarring jumps on hover transitions
+  const ringRotations = useRef({
+    ring1X: 0,
+    ring1Y: 0,
+    ring2X: 0,
+    ring2Z: 0,
+    ring3Y: 0,
+    ring3Z: 0,
+  });
+  const logoRotationY = useRef(0);
+  const logoRotationX = useRef(0);
+
+  useFrame((state, delta) => {
+    const t = state.clock.getElapsedTime();
+    const dt = Math.min(delta, 0.1); // clamp delta to prevent massive jumps on lag spikes
+
+    // Smooth frame-rate independent hover transition
+    const lerpSpeed = hovered ? 6.0 : 4.0;
+    hoverFactor.current = THREE.MathUtils.lerp(hoverFactor.current, hovered ? 1 : 0, 1 - Math.exp(-lerpSpeed * dt));
+
+    // Rotate centerpiece logo (floats, and tilts/spins on hover)
+    const floatY = Math.sin(t * 0.5) * 0.15;
+    const floatX = Math.sin(t * 0.35) * 0.08;
+    const floatZ = Math.sin(t * 0.25) * 0.03;
+
+    // Smoothly accumulate rotation to prevent sudden angle jumps when speed changes
+    const logoSpinSpeedY = 0.05 * hoverFactor.current;
+    const logoSpinSpeedX = Math.sin(t * 1.2) * 0.03 * hoverFactor.current;
+
+    logoRotationY.current += dt * logoSpinSpeedY;
+    logoRotationX.current += dt * logoSpinSpeedX;
+
+    logoGroupRef.current.rotation.y = floatY + logoRotationY.current;
+    logoGroupRef.current.rotation.x = floatX + logoRotationX.current;
+    logoGroupRef.current.rotation.z = floatZ;
+
+    // Scale centerpiece logo on hover (increased from 0.12 to 0.35 for a much larger effect)
+    const scaleVal = 1 + hoverFactor.current * 0.35;
+    logoGroupRef.current.scale.set(scaleVal, scaleVal, scaleVal);
+
+    // Gyroscopic counter-rotating rings (speeds up and scales on hover)
+    const ringSpeed = 1 + hoverFactor.current * 1.5;
+    const ringScaleVal = 1 + hoverFactor.current * 0.20; // Scale rings to expand outwards as the logo grows
+
+    ringRotations.current.ring1X += -dt * 0.22 * ringSpeed;
+    ringRotations.current.ring1Y += -dt * 0.16 * ringSpeed;
+    ringRef.current.rotation.x = ringRotations.current.ring1X;
+    ringRef.current.rotation.y = ringRotations.current.ring1Y;
+    ringRef.current.scale.set(ringScaleVal, ringScaleVal, ringScaleVal);
+
+    if (ring2Ref.current) {
+      ringRotations.current.ring2X += dt * 0.18 * ringSpeed;
+      ringRotations.current.ring2Z += dt * 0.24 * ringSpeed;
+      ring2Ref.current.rotation.x = ringRotations.current.ring2X;
+      ring2Ref.current.rotation.z = ringRotations.current.ring2Z;
+      ring2Ref.current.scale.set(ringScaleVal, ringScaleVal, ringScaleVal);
+    }
+    if (ring3Ref.current) {
+      ringRotations.current.ring3Y += dt * 0.12 * ringSpeed;
+      ringRotations.current.ring3Z += -dt * 0.2 * ringSpeed;
+      ring3Ref.current.rotation.y = ringRotations.current.ring3Y;
+      ring3Ref.current.rotation.z = ringRotations.current.ring3Z;
+      ring3Ref.current.scale.set(ringScaleVal, ringScaleVal, ringScaleVal);
+    }
+
+    // Intensify emissive glow on hover
+    if (ringMatRef.current) {
+      ringMatRef.current.emissiveIntensity = 0.35 + hoverFactor.current * 0.55;
+    }
+    if (ring2MatRef.current) {
+      ring2MatRef.current.emissiveIntensity = 0.4 + hoverFactor.current * 0.6;
+    }
+    if (ring3MatRef.current) {
+      ring3MatRef.current.emissiveIntensity = 1.2 + hoverFactor.current * 0.8;
+    }
+    if (logoMatRef.current) {
+      // Prevent washout by keeping emissive low and using a dark base color (#222222)
+      logoMatRef.current.emissiveIntensity = hoverFactor.current * 0.25;
+
+      // Animate material properties on hover for premium, dynamic reflections
+      const baseRoughness = isLow ? 0.2 : 0.15;
+      const targetRoughness = isLow ? 0.18 : 0.05;
+      logoMatRef.current.roughness = THREE.MathUtils.lerp(baseRoughness, targetRoughness, hoverFactor.current);
+
+      const baseEnv = isLow ? 0.8 : 1.2;
+      const targetEnv = isLow ? 1.0 : 2.2;
+      logoMatRef.current.envMapIntensity = THREE.MathUtils.lerp(baseEnv, targetEnv, hoverFactor.current);
+
+      const baseMetal = isLow ? 0.05 : 0.1;
+      const targetMetal = isLow ? 0.08 : 0.25;
+      logoMatRef.current.metalness = THREE.MathUtils.lerp(baseMetal, targetMetal, hoverFactor.current);
+
+      if ('clearcoat' in logoMatRef.current) {
+        (logoMatRef.current as any).clearcoat = THREE.MathUtils.lerp(0.6, 0.95, hoverFactor.current);
+      }
+    }
   });
 
   return (
-    <group ref={groupRef}>
-      <mesh position={[0, 0, 0]}>
-        <planeGeometry args={[4.2, 4.2]} />
-        {isLow ? (
-          /* Low-end: plain standard material — no transmission/clearcoat shader */
-          <meshStandardMaterial
-            map={logoTexture}
-            transparent={true}
-            roughness={0.2}
-            metalness={0.05}
-            envMapIntensity={0.8}
-            side={THREE.DoubleSide}
-          />
-        ) : (
-          /* High-end: full physical glass material */
-          <meshPhysicalMaterial
-            map={logoTexture}
-            transparent={true}
-            roughness={0.08}
-            transmission={0.65}
-            thickness={0.8}
-            clearcoat={1.0}
-            clearcoatRoughness={0.05}
-            ior={1.52}
-            envMapIntensity={2.2}
-            side={THREE.DoubleSide}
-          />
-        )}
+    <group>
+      {/* Centered INL Logo */}
+      <group ref={logoGroupRef}>
+        <mesh
+          position={[0, 0, 0]}
+          onPointerOver={(e) => {
+            e.stopPropagation();
+            setHovered(true);
+            document.body.style.cursor = 'pointer';
+          }}
+          onPointerOut={(e) => {
+            e.stopPropagation();
+            setHovered(false);
+            document.body.style.cursor = 'default';
+          }}
+        >
+          <planeGeometry args={[4.2, 4.2]} />
+          {isLow ? (
+            /* Low-end: plain standard material — no transmission/clearcoat shader */
+            <meshStandardMaterial
+              ref={logoMatRef}
+              map={logoTexture}
+              transparent={true}
+              roughness={0.2}
+              metalness={0.05}
+              envMapIntensity={0.8}
+              side={THREE.DoubleSide}
+              emissive="#222222"
+              emissiveIntensity={0}
+            />
+          ) : (
+            /* High-end: realistic glossy physical material */
+            <meshPhysicalMaterial
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ref={logoMatRef as any}
+              map={logoTexture}
+              transparent={true}
+              roughness={0.15}
+              metalness={0.1}
+              clearcoat={0.6}
+              clearcoatRoughness={0.1}
+              envMapIntensity={1.2}
+              side={THREE.DoubleSide}
+              emissive="#222222"
+              emissiveIntensity={0}
+            />
+          )}
+        </mesh>
+      </group>
+
+      {/* Torus Ring 1: Blue */}
+      <mesh ref={ringRef}>
+        <torusGeometry args={[2.3, 0.04, isLow ? 10 : 18, isLow ? 80 : 140]} />
+        <meshStandardMaterial
+          ref={ringMatRef}
+          color="#3b82f6"
+          roughness={0.08}
+          metalness={0.95}
+          envMapIntensity={2.2}
+          emissive="#1d4ed8"
+          emissiveIntensity={0.35}
+        />
+      </mesh>
+
+      {/* Torus Ring 2: Orange */}
+      <mesh ref={ring2Ref}>
+        <torusGeometry args={[2.45, 0.03, isLow ? 10 : 18, isLow ? 80 : 140]} />
+        <meshStandardMaterial
+          ref={ring2MatRef}
+          color="#f97316"
+          roughness={0.12}
+          metalness={0.95}
+          envMapIntensity={2.2}
+          emissive="#ea580c"
+          emissiveIntensity={0.4}
+        />
+      </mesh>
+
+      {/* Torus Ring 3: Green */}
+      <mesh ref={ring3Ref} rotation={[Math.PI / 3, 0, 0]}>
+        <torusGeometry args={[2.62, 0.015, isLow ? 8 : 16, isLow ? 90 : 160]} />
+        <meshStandardMaterial
+          ref={ring3MatRef}
+          color="#10b981"
+          roughness={0.15}
+          metalness={0.8}
+          emissive="#059669"
+          emissiveIntensity={1.2}
+        />
       </mesh>
     </group>
   );
@@ -90,166 +253,11 @@ function EnergyOrbiter({ radius, speed, color, offset }: EnergyOrbiterProps) {
     <Trail width={0.10} length={5} color={color} attenuation={(w) => w * w} decay={1.8}>
       <group ref={meshRef}>
         <mesh>
-          {/* Reduced segments on the sphere for better perf */}
           <sphereGeometry args={[0.05, 8, 8]} />
           <meshBasicMaterial color={color} />
         </mesh>
       </group>
     </Trail>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Orbiting Seed                                                              */
-/* -------------------------------------------------------------------------- */
-interface OrbitingSeedProps {
-  radius: number;
-  speed: number;
-  offset: number;
-  yOffset: number;
-  size: number;
-  trail?: boolean;
-  isLow: boolean;
-}
-
-function OrbitingSeed({ radius, speed, offset, yOffset, size, trail, isLow }: OrbitingSeedProps) {
-  const meshRef = useRef<THREE.Group>(null!);
-
-  const seedTexture = useMemo(() => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 8;   // Smaller texture on low-end
-    canvas.height = 64;
-    const ctx = canvas.getContext('2d')!;
-    const grad = ctx.createLinearGradient(0, 0, 0, 64);
-    grad.addColorStop(0,    '#0a0503');
-    grad.addColorStop(0.2,  '#1a0804');
-    grad.addColorStop(0.55, '#a31b1b');
-    grad.addColorStop(0.85, '#d97706');
-    grad.addColorStop(1,    '#f59e0b');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 8, 64);
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
-    return tex;
-  }, []);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    const angle = t * speed + offset;
-    meshRef.current.position.x = Math.cos(angle) * radius;
-    meshRef.current.position.z = Math.sin(angle) * radius;
-    meshRef.current.position.y = yOffset + Math.sin(t * 0.95 + offset) * 0.18;
-    meshRef.current.rotation.x = t * 0.35 + offset;
-    meshRef.current.rotation.y = t * 0.5;
-  });
-
-  // Reduced detail on low-end: dodecahedron detail=0 instead of 1
-  const body = (
-    <group>
-      <mesh scale={[0.8, 1.25, 0.8]}>
-        <dodecahedronGeometry args={[0.26, isLow ? 0 : 1]} />
-        {isLow ? (
-          <meshStandardMaterial map={seedTexture} roughness={0.3} metalness={0.02} />
-        ) : (
-          <meshPhysicalMaterial
-            map={seedTexture}
-            roughness={0.12}
-            metalness={0.02}
-            clearcoat={1.0}
-            clearcoatRoughness={0.03}
-            ior={1.48}
-            envMapIntensity={2.5}
-          />
-        )}
-      </mesh>
-      <mesh position={[0, -0.28, 0]} rotation={[Math.PI, 0, 0]}>
-        {/* Reduced cone segments on low-end */}
-        <coneGeometry args={[0.16, 0.22, isLow ? 5 : 8]} />
-        <meshStandardMaterial color="#d97706" roughness={0.95} metalness={0.05} />
-      </mesh>
-    </group>
-  );
-
-  if (trail && !isLow) {
-    return (
-      <Trail width={0.18} length={3} color="#d97706" attenuation={(w) => w * w} decay={1.5}>
-        <group ref={meshRef} scale={size}>{body}</group>
-      </Trail>
-    );
-  }
-
-  return <group ref={meshRef} scale={size}>{body}</group>;
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Orbiting Leaf                                                              */
-/* -------------------------------------------------------------------------- */
-interface OrbitingLeafProps {
-  radius: number;
-  speed: number;
-  offset: number;
-  yOffset: number;
-  size: number;
-  isLow: boolean;
-}
-
-function OrbitingLeaf({ radius, speed, offset, yOffset, size, isLow }: OrbitingLeafProps) {
-  const meshRef = useRef<THREE.Group>(null!);
-
-  // Reduced geometry resolution on low-end
-  const leafGeometry = useMemo(() => {
-    const [w, h] = isLow ? [6, 12] : [12, 24];
-    const geom = new THREE.PlaneGeometry(0.38, 1.6, w, h);
-    const pos = geom.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const crease = -Math.abs(x) * 0.75;
-      const bendY = -Math.pow(y + 0.8, 2) * 0.08;
-      pos.setZ(i, crease + bendY);
-      const t = (y + 0.8) / 1.6;
-      const factor = Math.sin(t * Math.PI) * 0.85 + (1 - t) * 0.15;
-      pos.setX(i, x * factor);
-    }
-    geom.computeVertexNormals();
-    return geom;
-  }, [isLow]);
-
-  useFrame(({ clock }) => {
-    const t = clock.getElapsedTime();
-    const angle = t * speed + offset;
-    meshRef.current.position.x = Math.cos(angle) * radius;
-    meshRef.current.position.z = Math.sin(angle) * radius;
-    meshRef.current.position.y = yOffset + Math.sin(t * 1.1 + offset) * 0.22;
-    meshRef.current.rotation.x = t * 0.65 + offset;
-    meshRef.current.rotation.y = t * 0.45;
-    meshRef.current.rotation.z = Math.sin(t * 0.5) * 0.35;
-  });
-
-  return (
-    <group ref={meshRef} scale={size}>
-      <mesh geometry={leafGeometry}>
-        {isLow ? (
-          <meshStandardMaterial
-            color="#065f46"
-            roughness={0.4}
-            side={THREE.DoubleSide}
-          />
-        ) : (
-          <meshPhysicalMaterial
-            color="#065f46"
-            roughness={0.25}
-            clearcoat={0.9}
-            clearcoatRoughness={0.1}
-            transmission={0.22}
-            thickness={0.1}
-            ior={1.42}
-            side={THREE.DoubleSide}
-          />
-        )}
-      </mesh>
-    </group>
   );
 }
 
@@ -260,17 +268,17 @@ function CameraController({ isLow }: { isLow: boolean }) {
   const groupRef = useRef<THREE.Group>(null!);
   const { pointer } = useThree();
 
-  useFrame(() => {
-    // Reduce lerp frequency on low-end
-    const lerpFactor = isLow ? 0.025 : 0.04;
+  useFrame((state, delta) => {
+    const dt = Math.min(delta, 0.1);
+    // Frame-rate independent lerp using damp/exponential decay
+    const speed = isLow ? 1.5 : 2.5;
+    const lerpFactor = 1 - Math.exp(-speed * dt);
     const targetY = pointer.x * (isLow ? 0.25 : 0.45);
     const targetX = pointer.y * (isLow ? -0.2 : -0.35);
     groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, targetY, lerpFactor);
     groupRef.current.rotation.x = THREE.MathUtils.lerp(groupRef.current.rotation.x, targetX, lerpFactor);
   });
 
-  // Low-end: 2 seeds, 1 leaf, no energy orbiters, fewer sparkles
-  // High-end: 3 seeds, 3 leaves, 3 energy orbiters, more sparkles
   return (
     <group ref={groupRef}>
       <Float speed={isLow ? 0.8 : 1.3} rotationIntensity={0.1} floatIntensity={isLow ? 0.3 : 0.5}>
@@ -283,22 +291,6 @@ function CameraController({ isLow }: { isLow: boolean }) {
           <EnergyOrbiter radius={2.2} speed={1.4}  color="#fbbf24" offset={0}           />
           <EnergyOrbiter radius={2.5} speed={-1.1} color="#f97316" offset={Math.PI}     />
           <EnergyOrbiter radius={2.0} speed={1.7}  color="#34d399" offset={Math.PI / 2} />
-        </>
-      )}
-
-      {/* Seeds */}
-      <OrbitingSeed radius={2.2} speed={0.4}   offset={0.0} yOffset={0.2}  size={1.0} trail isLow={isLow} />
-      <OrbitingSeed radius={2.6} speed={-0.35} offset={2.1} yOffset={-0.2} size={0.8} trail isLow={isLow} />
-      {!isLow && (
-        <OrbitingSeed radius={2.4} speed={0.48} offset={4.2} yOffset={0.35} size={0.7} isLow={false} />
-      )}
-
-      {/* Leaves */}
-      <OrbitingLeaf radius={2.0} speed={-0.45} offset={1.0} yOffset={-0.1} size={1.1} isLow={isLow} />
-      {!isLow && (
-        <>
-          <OrbitingLeaf radius={2.7} speed={0.3}   offset={3.1} yOffset={0.1}  size={0.9} isLow={false} />
-          <OrbitingLeaf radius={2.9} speed={-0.28} offset={5.2} yOffset={-0.4} size={1.0} isLow={false} />
         </>
       )}
 
