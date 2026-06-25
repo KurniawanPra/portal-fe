@@ -53,7 +53,7 @@ function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolea
         mesh.castShadow = false; // Disable shadows for the heavy 71MB model
         mesh.receiveShadow = false;
         if (mesh.material) {
-          const oldMat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as any;
+          const oldMat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
           mesh.material = new THREE.MeshStandardMaterial({
             map: oldMat.map,
             color: oldMat.color,
@@ -345,13 +345,6 @@ export default function Inl3DScene({ isHoveredExternal }: { isHoveredExternal?: 
       </Suspense>
     </Canvas>
   );
-}
-
-/* Lazy-loaded environment so it doesn't block initial render */
-function EnvironmentLazy() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const { Environment } = require('@react-three/drei');
-  return <Environment preset="city" />;
 }
 
 // Pre-load the GLB model to prevent render lag

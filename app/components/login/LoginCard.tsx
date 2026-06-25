@@ -1,16 +1,33 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { Checkbox } from '@/components/animate-ui/components/headless/checkbox';
+import { api } from '@/lib/api';
+import { saveTokens } from '@/lib/auth';
 
 interface MessageState {
   type: 'error' | 'ok';
   text: string;
 }
 
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: string;
+  user: {
+    id: string;
+    email: string;
+    role: 'user' | 'super_admin';
+    isActive: boolean;
+    lastLogin: string | null;
+  };
+}
+
 export default function LoginCard() {
+  const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
@@ -19,7 +36,7 @@ export default function LoginCard() {
   const [focused, setFocused] = useState<string | null>(null);
   const [message, setMessage] = useState<MessageState | null>(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (loading) return;
     if (!username || !password) {
       setMessage({ type: 'error', text: 'Mohon isi Username/Email dan Password.' });
@@ -27,11 +44,31 @@ export default function LoginCard() {
     }
     setMessage(null);
     setLoading(true);
-    console.log('[Portal PT INL] Submit:', { username, remember });
-    setTimeout(() => {
+
+    try {
+      const res = await api.post<LoginResponse>('/auth/login', {
+        email: username,
+        password,
+      });
+
+      saveTokens(res.data.accessToken, res.data.refreshToken);
+      setMessage({ type: 'ok', text: 'Login berhasil! Mengarahkan...' });
+
+      // Redirect based on role
+      setTimeout(() => {
+        if (res.data.user.role === 'super_admin') {
+          router.push('/admin');
+        } else {
+          router.push('/dashboard');
+        }
+      }, 500);
+    } catch (err) {
+      setMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Gagal login. Silakan coba lagi.',
+      });
       setLoading(false);
-      setMessage({ type: 'ok', text: 'Login berhasil! (Simulasi sukses)' });
-    }, 1200);
+    }
   };
 
   // const ssoLogin = (provider: string) => {

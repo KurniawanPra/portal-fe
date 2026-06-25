@@ -1,17 +1,30 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Mail, Building2, UserX, UserCheck, ShieldCheck,
-  ShieldAlert, Phone, UserCog, ChevronDown
+  ShieldAlert, Phone, UserCog, ChevronDown, Loader2, Lock
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
+import { api } from '@/lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+// Backend roles: 'user' | 'super_admin'
+// Frontend display: 'Admin' | 'User'
 type UserRole   = 'Admin' | 'User';
 type UserStatus = 'Aktif' | 'Suspended';
+
+interface ApiUser {
+  id: string;
+  email: string;
+  role: 'user' | 'super_admin';
+  isActive: boolean;
+  lastLogin: string | null;
+  employeeId: string | null;
+  createdAt: string;
+}
 
 interface EmployeeBrief {
   id: string;
@@ -22,41 +35,29 @@ interface EmployeeBrief {
 
 interface UserData {
   id: string;
-  nama: string;
   email: string;
-  nrk: string;
-  nomor_hp: string;
-  jabatan: string;
-  bagian: string;
   role: UserRole;
   status: UserStatus;
   last_login: string;
   dibuat_pada: string;
   employeeId?: string;
+  // Employee-linked display fields
+  nama: string;
+  nrk: string;
+  jabatan: string;
+  unitOrganisasi: string;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_EMPLOYEES: EmployeeBrief[] = [
-  { id: 'emp-1', nama: 'Budi Santoso, S.T.',   nrk: 'NRK-260901', jabatan: 'IT Lead Specialist'     },
-  { id: 'emp-2', nama: 'Hendra Gunawan',       nrk: 'NRK-260902', jabatan: 'Accounting Manager'     },
-  { id: 'emp-3', nama: 'Citra Anggraini',      nrk: 'NRK-260903', jabatan: 'HR Specialist'           },
-  { id: 'emp-4', nama: 'Rian Hidayat',         nrk: 'NRK-260904', jabatan: 'Plant Operator'          },
-  { id: 'emp-5', nama: 'Dewi Lestari',         nrk: 'NRK-260905', jabatan: 'Marketing Communicator'  },
-  { id: 'emp-6', nama: 'Agus Pratama',         nrk: 'NRK-260906', jabatan: 'Procurement Specialist'  },
-  { id: 'emp-7', nama: 'Siti Nurhaliza',       nrk: 'NRK-260907', jabatan: 'Legal Officer'            },
-];
-
-const INITIAL_USERS: UserData[] = [
-  { id: 'u-1', nama: 'Budi Santoso, S.T.',     email: 'budi.santoso@inl.co.id',     nrk: 'NRK-260901', nomor_hp: '0812-3456-7890', jabatan: 'IT Lead Specialist',       bagian: 'TID', role: 'Admin',  status: 'Aktif',     last_login: '2026-06-23T20:15:00', dibuat_pada: '2024-01-10', employeeId: 'emp-1' },
-  { id: 'u-2', nama: 'Hendra Gunawan',         email: 'hendra.gunawan@inl.co.id',   nrk: 'NRK-260902', nomor_hp: '0812-7654-3210', jabatan: 'Accounting Manager',       bagian: 'KEU', role: 'User',   status: 'Suspended', last_login: '2026-06-20T11:40:00', dibuat_pada: '2024-01-12', employeeId: 'emp-2' },
-  { id: 'u-3', nama: 'Citra Anggraini',        email: 'citra.anggraini@inl.co.id',  nrk: 'NRK-260903', nomor_hp: '0813-8888-9999', jabatan: 'HR Specialist',             bagian: 'SDM', role: 'User',   status: 'Aktif',     last_login: '2026-06-23T08:22:00', dibuat_pada: '2024-02-05', employeeId: 'emp-3' },
-  { id: 'u-4', nama: 'Rian Hidayat',           email: 'rian.hidayat@inl.co.id',     nrk: 'NRK-260904', nomor_hp: '0852-1111-2222', jabatan: 'Plant Operator',           bagian: 'OPR', role: 'User',   status: 'Aktif',     last_login: '2026-06-22T17:05:00', dibuat_pada: '2024-02-20', employeeId: 'emp-4' },
-  { id: 'u-5', nama: 'Dewi Lestari',           email: 'dewi.lestari@inl.co.id',     nrk: 'NRK-260905', nomor_hp: '0811-2222-3333', jabatan: 'Marketing Communicator',   bagian: 'MKT', role: 'User',   status: 'Aktif',     last_login: '2026-06-23T14:50:00', dibuat_pada: '2024-03-01', employeeId: 'emp-5' },
-];
+// ─── Role Mapping ─────────────────────────────────────────────────────────────
+function mapRoleFromApi(role: 'user' | 'super_admin'): UserRole {
+  return role === 'super_admin' ? 'Admin' : 'User';
+}
+function mapRoleToApi(role: UserRole): 'user' | 'super_admin' {
+  return role === 'Admin' ? 'super_admin' : 'user';
+}
 
 const ROLES: UserRole[] = ['Admin', 'User'];
 const STATUSES: UserStatus[] = ['Aktif', 'Suspended'];
-const BAGIANS = ['TID', 'KEU', 'SDM', 'OPR', 'MKT', 'LGL', 'LOG'];
 
 // Color palettes for UI badges and icons
 const ROLE_BADGE: Record<UserRole, string> = {
@@ -82,56 +83,159 @@ const ROLE_AVATAR: Record<UserRole, string> = {
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
 const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400';
 
-type FormData = Omit<UserData, 'id' | 'last_login' | 'dibuat_pada'>;
-const emptyForm: FormData = { nama:'', email:'', nrk:'', nomor_hp:'', jabatan:'', bagian:'TID', role:'User', status:'Aktif', employeeId:'' };
+interface FormData {
+  email: string;
+  password: string;
+  role: UserRole;
+  status: UserStatus;
+  employeeId: string;
+}
+const emptyForm: FormData = { email: '', password: '', role: 'User', status: 'Aktif', employeeId: '' };
 
 export default function ManajemenUserPage() {
-  const [users, setUsers]     = useState<UserData[]>(INITIAL_USERS);
+  const [users, setUsers]     = useState<UserData[]>([]);
+  const [allEmployees, setAllEmployees] = useState<EmployeeBrief[]>([]);
   const [search, setSearch]   = useState('');
   const [filterRole,   setFilterRole]   = useState<UserRole | 'Semua'>('Semua');
   const [filterStatus, setFilterStatus] = useState<UserStatus | 'Semua'>('Semua');
+  const [loading, setLoading] = useState(true);
 
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editTarget,   setEditTarget]   = useState<UserData | null>(null);
   const [form,         setForm]         = useState<FormData>(emptyForm);
+  const [saving,       setSaving]       = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
+  const [deleting,     setDeleting]     = useState(false);
   const [toast,        setToast]        = useState<{ type:'ok'|'err'; text:string } | null>(null);
 
   const showToast = (type: 'ok'|'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
 
+  // ─── Fetch Data ───────────────────────────────────────────────────────────
+  const fetchUsers = useCallback(async () => {
+    try {
+      const [usersRes, employeesRes] = await Promise.all([
+        api.get<ApiUser[]>('/users?limit=200'),
+        api.get<EmployeeBrief[]>('/employees?limit=200'),
+      ]);
+
+      const empMap = new Map<string, EmployeeBrief>();
+      (employeesRes.data || []).forEach(e => empMap.set(e.id, e));
+
+      setAllEmployees(employeesRes.data || []);
+
+      const mapped: UserData[] = (usersRes.data || []).map(u => {
+        const emp = u.employeeId ? empMap.get(u.employeeId) : undefined;
+        return {
+          id: u.id,
+          email: u.email,
+          role: mapRoleFromApi(u.role),
+          status: u.isActive ? 'Aktif' : 'Suspended',
+          last_login: u.lastLogin || '-',
+          dibuat_pada: u.createdAt ? u.createdAt.slice(0, 10) : '-',
+          employeeId: u.employeeId || undefined,
+          nama: emp?.nama || u.email.split('@')[0],
+          nrk: emp?.nrk || '-',
+          jabatan: emp?.jabatan || '-',
+          unitOrganisasi: '-',
+        };
+      });
+
+      setUsers(mapped);
+    } catch (err) {
+      showToast('err', err instanceof Error ? err.message : 'Gagal memuat data.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  // ─── Filtering ────────────────────────────────────────────────────────────
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
-    return (u.nama.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.nrk.toLowerCase().includes(q) || u.bagian.toLowerCase().includes(q))
+    return (u.nama.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.nrk.toLowerCase().includes(q))
       && (filterRole   === 'Semua' || u.role   === filterRole)
       && (filterStatus === 'Semua' || u.status === filterStatus);
   });
 
   // Employee yang sudah di-assign ke user lain tidak bisa dipilih lagi
   const assignedEmployeeIds = useMemo(() => new Set(users.filter(u => u.employeeId).map(u => u.employeeId!)), [users]);
-  const availableEmployees = useMemo(() => MOCK_EMPLOYEES.filter(e => !assignedEmployeeIds.has(e.id)), [assignedEmployeeIds]);
+  const availableEmployees = useMemo(() => allEmployees.filter(e => !assignedEmployeeIds.has(e.id)), [allEmployees, assignedEmployeeIds]);
 
   const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setModalOpen(true); }, []);
-  const openEdit   = useCallback((u: UserData) => { setEditTarget(u); setForm({ nama:u.nama, email:u.email, nrk:u.nrk, nomor_hp:u.nomor_hp, jabatan:u.jabatan, bagian:u.bagian, role:u.role, status:u.status, employeeId:u.employeeId ?? '' }); setModalOpen(true); }, []);
+  const openEdit   = useCallback((u: UserData) => {
+    setEditTarget(u);
+    setForm({ email: u.email, password: '', role: u.role, status: u.status, employeeId: u.employeeId ?? '' });
+    setModalOpen(true);
+  }, []);
 
-  const handleSave = useCallback(() => {
-    if (!form.nama.trim() || !form.email.trim()) { showToast('err', 'Nama dan Email wajib diisi.'); return; }
-    if (!form.email.includes('@'))                { showToast('err', 'Format email tidak valid.'); return; }
-    if (editTarget) {
-      setUsers(p => p.map(u => u.id === editTarget.id ? { ...u, ...form } : u));
-      showToast('ok', `"${form.nama}" berhasil diperbarui.`);
-    } else {
-      setUsers(p => [...p, { ...form, id:`u-${Date.now()}`, last_login:'-', dibuat_pada:new Date().toISOString().slice(0,10) }]);
-      showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
+  // ─── Save (Create/Update) ─────────────────────────────────────────────────
+  const handleSave = useCallback(async () => {
+    if (!form.email.trim())     { showToast('err', 'Email wajib diisi.'); return; }
+    if (!form.email.includes('@')) { showToast('err', 'Format email tidak valid.'); return; }
+    if (!editTarget && !form.password.trim()) { showToast('err', 'Password wajib diisi untuk user baru.'); return; }
+
+    setSaving(true);
+    try {
+      if (editTarget) {
+        // Update
+        const body: Record<string, unknown> = {
+          email: form.email,
+          role: mapRoleToApi(form.role),
+          isActive: form.status === 'Aktif',
+          employeeId: form.employeeId || null,
+        };
+        if (form.password.trim()) body.password = form.password;
+
+        await api.put(`/users/${editTarget.id}`, body);
+        showToast('ok', `"${form.email}" berhasil diperbarui.`);
+      } else {
+        // Create
+        await api.post('/users', {
+          email: form.email,
+          password: form.password,
+          role: mapRoleToApi(form.role),
+          isActive: form.status === 'Aktif',
+          employeeId: form.employeeId || null,
+        });
+        showToast('ok', `"${form.email}" berhasil ditambahkan.`);
+      }
+      setModalOpen(false);
+      setLoading(true);
+      await fetchUsers();
+    } catch (err) {
+      showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-  }, [form, editTarget]);
+  }, [form, editTarget, fetchUsers]);
 
-  const handleDelete = useCallback(() => {
+  // ─── Delete ───────────────────────────────────────────────────────────────
+  const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
-    setUsers(p => p.filter(u => u.id !== deleteTarget.id));
-    showToast('ok', `"${deleteTarget.nama}" dihapus.`);
-    setDeleteTarget(null);
-  }, [deleteTarget]);
+    setDeleting(true);
+    try {
+      await api.delete(`/users/${deleteTarget.id}`);
+      showToast('ok', `"${deleteTarget.nama}" dihapus.`);
+      setDeleteTarget(null);
+      setLoading(true);
+      await fetchUsers();
+    } catch (err) {
+      showToast('err', err instanceof Error ? err.message : 'Gagal menghapus.');
+    } finally {
+      setDeleting(false);
+    }
+  }, [deleteTarget, fetchUsers]);
+
+  // ─── Toggle Status ────────────────────────────────────────────────────────
+  const toggleStatus = useCallback(async (u: UserData) => {
+    try {
+      await api.put(`/users/${u.id}`, { isActive: u.status !== 'Aktif' });
+      await fetchUsers();
+    } catch (err) {
+      showToast('err', err instanceof Error ? err.message : 'Gagal mengubah status.');
+    }
+  }, [fetchUsers]);
 
   const fmtLogin = (s: string) => {
     if (s === '-') return '-';
@@ -199,7 +303,7 @@ export default function ManajemenUserPage() {
         <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-            <input type="text" placeholder="Cari nama, email, NRK, atau bagian..." value={search} onChange={e => setSearch(e.target.value)}
+            <input type="text" placeholder="Cari nama, email, atau NRK..." value={search} onChange={e => setSearch(e.target.value)}
               className={`${inputCls} pl-10`} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -225,10 +329,16 @@ export default function ManajemenUserPage() {
 
         {/* Table */}
         <div className="overflow-x-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-20 gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+              <span className="text-sm font-semibold text-slate-400">Memuat data user...</span>
+            </div>
+          ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 dark:border-white/[0.04]">
-                {['User','NRK / Bagian','Role','Status','Login Terakhir','Aksi'].map(h => (
+                {['User','NRK / Jabatan','Role','Status','Login Terakhir','Aksi'].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 last:text-right">{h}</th>
                 ))}
               </tr>
@@ -242,7 +352,7 @@ export default function ManajemenUserPage() {
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-sm text-white bg-gradient-to-br ${ROLE_AVATAR[u.role]}`}>
-                        {u.nama.charAt(0)}
+                        {u.nama.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
                         <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{u.nama}</p>
@@ -258,7 +368,7 @@ export default function ManajemenUserPage() {
                     <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{u.nrk}</p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Building2 className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500">{u.bagian} — {u.jabatan}</p>
+                      <p className="text-[11px] text-slate-400 dark:text-slate-500">{u.jabatan}</p>
                     </div>
                   </td>
                   {/* Role */}
@@ -278,12 +388,12 @@ export default function ManajemenUserPage() {
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-1">
                       {u.status === 'Aktif' ? (
-                        <button title="Suspend" onClick={() => setUsers(p => p.map(x => x.id===u.id ? {...x, status:'Suspended'} : x))}
+                        <button title="Suspend" onClick={() => toggleStatus(u)}
                           className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all cursor-pointer focus:outline-none">
                           <UserX className="h-3.5 w-3.5" />
                         </button>
                       ) : (
-                        <button title="Aktifkan" onClick={() => setUsers(p => p.map(x => x.id===u.id ? {...x, status:'Aktif'} : x))}
+                        <button title="Aktifkan" onClick={() => toggleStatus(u)}
                           className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all cursor-pointer focus:outline-none">
                           <UserCheck className="h-3.5 w-3.5" />
                         </button>
@@ -302,6 +412,7 @@ export default function ManajemenUserPage() {
               ))}
             </tbody>
           </table>
+          )}
         </div>
         <div className="px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] text-[11px] font-bold text-slate-450 dark:text-slate-500">
           {filtered.length} dari {users.length} user
@@ -328,40 +439,19 @@ export default function ManajemenUserPage() {
               </div>
               <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
                 <div>
-                  <label className={labelCls}>Nama Lengkap *</label>
-                  <input type="text" value={form.nama} onChange={e => setForm(f=>({...f, nama:e.target.value}))} placeholder="cth: Budi Santoso, S.T." className={inputCls} />
-                </div>
-                <div>
                   <label className={labelCls}>Email SSO *</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <input type="email" value={form.email} onChange={e => setForm(f=>({...f, email:e.target.value}))} placeholder="nama@inl.co.id" className={`${inputCls} pl-10`} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>NRK</label>
-                    <input type="text" value={form.nrk} onChange={e => setForm(f=>({...f, nrk:e.target.value}))} placeholder="NRK-XXXXXX" className={inputCls} />
+                <div>
+                  <label className={labelCls}>{editTarget ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password *'}</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    <input type="password" value={form.password} onChange={e => setForm(f=>({...f, password:e.target.value}))} placeholder={editTarget ? '••••••••' : 'Min 8 karakter, huruf kapital + angka'} className={`${inputCls} pl-10`} />
                   </div>
-                  <div>
-                    <label className={labelCls}>Nomor HP</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                      <input type="tel" value={form.nomor_hp} onChange={e => setForm(f=>({...f, nomor_hp:e.target.value}))} placeholder="08xx-xxxx-xxxx" className={`${inputCls} pl-10`} />
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelCls}>Jabatan</label>
-                    <input type="text" value={form.jabatan} onChange={e => setForm(f=>({...f, jabatan:e.target.value}))} placeholder="cth: IT Specialist" className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Bagian (Unit)</label>
-                    <select value={form.bagian} onChange={e => setForm(f=>({...f, bagian:e.target.value}))} className={`${inputCls} cursor-pointer`}>
-                      {BAGIANS.map(b => <option key={b} value={b} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{b}</option>)}
-                    </select>
-                  </div>
+                  {!editTarget && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Min. 8 karakter, mengandung huruf kapital dan angka.</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -383,13 +473,13 @@ export default function ManajemenUserPage() {
                     <UserCog className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <select
                       value={form.employeeId ?? ''}
-                      onChange={e => setForm(f=>({...f, employeeId: e.target.value || undefined}))}
+                      onChange={e => setForm(f=>({...f, employeeId: e.target.value || ''}))}
                       className={`${inputCls} pl-10 cursor-pointer`}
                     >
                       <option value="" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">— Tidak dikaitkan —</option>
-                      {/* Tampilkan employee yang di-edit (jika ada) + available employees */}
+                      {/* Show currently linked employee if editing */}
                       {editTarget?.employeeId && (() => {
-                        const emp = MOCK_EMPLOYEES.find(e => e.id === editTarget.employeeId);
+                        const emp = allEmployees.find(e => e.id === editTarget.employeeId);
                         return emp ? <option key={emp.id} value={emp.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{emp.nama} — {emp.nrk}</option> : null;
                       })()}
                       {availableEmployees.filter(e => e.id !== editTarget?.employeeId).map(emp => (
@@ -403,8 +493,8 @@ export default function ManajemenUserPage() {
               </div>
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
                 <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
-                <LiquidButton variant="outline" size="sm" onClick={handleSave} className="cursor-pointer font-bold">
-                  {editTarget ? 'Simpan Perubahan' : 'Tambahkan'}
+                <LiquidButton variant="outline" size="sm" onClick={handleSave} disabled={saving} className="cursor-pointer font-bold">
+                  {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Menyimpan...</> : editTarget ? 'Simpan Perubahan' : 'Tambahkan'}
                 </LiquidButton>
               </div>
             </div>
@@ -428,7 +518,9 @@ export default function ManajemenUserPage() {
               </p>
               <div className="mt-5 flex gap-3">
                 <button onClick={() => setDeleteTarget(null)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
-                <button onClick={handleDelete} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-rose-500/20">Hapus Sekarang</button>
+                <button onClick={handleDelete} disabled={deleting} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-rose-500/20 disabled:opacity-50">
+                  {deleting ? <><Loader2 className="h-4 w-4 animate-spin inline mr-1" /> Menghapus...</> : 'Hapus Sekarang'}
+                </button>
               </div>
             </div>
           </div>
