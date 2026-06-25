@@ -1,25 +1,118 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/admin/Sidebar';
 import Navbar from '@/components/dashboard/Navbar';
 import { SidebarProvider, SidebarInset } from '@/components/animate-ui/components/radix/sidebar';
+import { api } from '@/lib/api';
+import { getAccessToken, clearTokens } from '@/lib/auth';
+import { Loader2 } from 'lucide-react';
 
-// Mock admin profile — in production comes from auth/session context
-const MOCK_ADMIN = {
-  id: 'adm-001',
-  nama: 'Budi Santoso, S.T.',
-  jabatan: 'IT Lead Specialist',
-  bagian: { nama: 'Teknologi Informasi & Digital' },
-};
+interface MeResponse {
+  id: string;
+  email: string;
+  role: 'user' | 'super_admin';
+  isActive: boolean;
+  employeeId: string | null;
+}
+
+interface UnitOrganisasi {
+  id: string;
+  nama: string;
+  kode: string;
+  tipe: string;
+  parentId: string | null;
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+  const [adminProfile, setAdminProfile] = useState<{
+    nama: string;
+    jabatan: string;
+    bagian: { nama: string };
+  } | null>(null);
 
-  const handleLogout = () => {
-    console.log('[Admin Panel] Logging out admin');
-    router.push('/login');
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = getAccessToken();
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      try {
+        const res = await api.get<MeResponse>('/auth/me');
+        const user = res.data;
+        if (user.role !== 'super_admin') {
+          router.push('/dashboard');
+          return;
+        }
+
+        if (user.employeeId) {
+          const [empRes, unitRes] = await Promise.all([
+            api.get<any>(`/employees/${user.employeeId}`),
+            api.get<UnitOrganisasi[]>('/org/unit?limit=200'),
+          ]);
+          const emp = empRes.data;
+          const units = unitRes.data || [];
+          const unit = units.find(u => u.id === emp.unitOrganisasiId);
+          setAdminProfile({
+            nama: emp.nama,
+            jabatan: emp.jabatan,
+            bagian: { nama: unit ? unit.nama : '-' },
+          });
+        } else {
+          let nameFallback = 'Administrator';
+          let titleFallback = 'Super Admin';
+          let bagianFallback = 'Portal Admin';
+
+          if (user.email === 'admin@inl.co.id') {
+            nameFallback = 'Budi Santoso, S.T.';
+            titleFallback = 'IT Lead Specialist';
+            bagianFallback = 'Teknologi Informasi & Digital';
+          } else {
+            const localPart = user.email.split('@')[0];
+            nameFallback = localPart
+              .split(/[\._-]/)
+              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ');
+          }
+
+          setAdminProfile({
+            nama: nameFallback,
+            jabatan: titleFallback,
+            bagian: { nama: bagianFallback },
+          });
+        }
+
+        setAuthorized(true);
+      } catch {
+        clearTokens();
+        router.push('/login');
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  if (!authorized || !adminProfile) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-50 dark:bg-[#0e1118] gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Memverifikasi hak akses...</span>
+      </div>
+    );
+  }
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout', {});
+    } catch {
+      // Ignore
+    } finally {
+      clearTokens();
+      router.push('/login');
+    }
   };
 
   return (
@@ -35,13 +128,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         />
 
         {/* Admin Sidebar */}
-        <AdminSidebar admin={MOCK_ADMIN} onLogout={handleLogout} />
+        <AdminSidebar admin={adminProfile} onLogout={handleLogout} />
 
         {/* Main View Area */}
         <SidebarInset>
           {/* Reuse same Navbar — shows breadcrumb + notifications */}
           <Suspense fallback={<div className="h-20 w-full bg-white/40 border-b border-white/60 animate-pulse" />}>
-            <Navbar employee={MOCK_ADMIN} />
+            <Navbar employee={adminProfile} />
           </Suspense>
 
           {/* Content Body */}

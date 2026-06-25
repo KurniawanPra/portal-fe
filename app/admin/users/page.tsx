@@ -4,7 +4,7 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Mail, Building2, UserX, UserCheck, ShieldCheck,
-  ShieldAlert, Phone, UserCog, ChevronDown, Loader2, Lock
+  ShieldAlert, UserCog, ChevronDown, Loader2, Lock
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
@@ -116,7 +116,7 @@ export default function ManajemenUserPage() {
       const [usersRes, employeesRes] = await Promise.all([
         api.get<ApiUser[]>('/users?limit=200'),
         api.get<EmployeeBrief[]>('/employees?limit=200'),
-      ]);
+      ]); 
 
       const empMap = new Map<string, EmployeeBrief>();
       (employeesRes.data || []).forEach(e => empMap.set(e.id, e));
@@ -177,12 +177,13 @@ export default function ManajemenUserPage() {
 
     setSaving(true);
     try {
+      const isActive = form.role === 'Admin' ? true : form.status === 'Aktif';
       if (editTarget) {
         // Update
         const body: Record<string, unknown> = {
           email: form.email,
           role: mapRoleToApi(form.role),
-          isActive: form.status === 'Aktif',
+          isActive,
           employeeId: form.employeeId || null,
         };
         if (form.password.trim()) body.password = form.password;
@@ -195,7 +196,7 @@ export default function ManajemenUserPage() {
           email: form.email,
           password: form.password,
           role: mapRoleToApi(form.role),
-          isActive: form.status === 'Aktif',
+          isActive,
           employeeId: form.employeeId || null,
         });
         showToast('ok', `"${form.email}" berhasil ditambahkan.`);
@@ -229,6 +230,10 @@ export default function ManajemenUserPage() {
 
   // ─── Toggle Status ────────────────────────────────────────────────────────
   const toggleStatus = useCallback(async (u: UserData) => {
+    if (u.role === 'Admin') {
+      showToast('err', 'Akun administrator tidak dapat di-nonaktifkan.');
+      return;
+    }
     try {
       await api.put(`/users/${u.id}`, { isActive: u.status !== 'Aktif' });
       await fetchUsers();
@@ -252,7 +257,7 @@ export default function ManajemenUserPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-[9998] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type==='ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
+        <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type==='ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
           {toast.type==='ok' ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400"/> : <AlertCircle className="h-4 w-4 shrink-0 text-rose-400"/>}
           {toast.text}
         </div>
@@ -387,7 +392,12 @@ export default function ManajemenUserPage() {
                   {/* Actions */}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center justify-end gap-1">
-                      {u.status === 'Aktif' ? (
+                      {u.role === 'Admin' ? (
+                        <button disabled title="Admin selalu aktif"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-200 dark:text-slate-800 cursor-not-allowed">
+                          <UserX className="h-3.5 w-3.5 opacity-30" />
+                        </button>
+                      ) : u.status === 'Aktif' ? (
                         <button title="Suspend" onClick={() => toggleStatus(u)}
                           className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all cursor-pointer focus:outline-none">
                           <UserX className="h-3.5 w-3.5" />
@@ -437,7 +447,7 @@ export default function ManajemenUserPage() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
+              <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto hide-scrollbar">
                 <div>
                   <label className={labelCls}>Email SSO *</label>
                   <div className="relative">
@@ -456,15 +466,37 @@ export default function ManajemenUserPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Role Akses</label>
-                    <select value={form.role} onChange={e => setForm(f=>({...f, role:e.target.value as UserRole}))} className={`${inputCls} cursor-pointer`}>
-                      {ROLES.map(r => <option key={r} value={r} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{r}</option>)}
-                    </select>
+                    <div className="relative">
+                      <select
+                        value={form.role}
+                        onChange={e => {
+                          const nextRole = e.target.value as UserRole;
+                          setForm(f=>({
+                            ...f,
+                            role: nextRole,
+                            status: nextRole === 'Admin' ? 'Aktif' : f.status
+                          }));
+                        }}
+                        className={`${inputCls} appearance-none pr-10 cursor-pointer`}
+                      >
+                        {ROLES.map(r => <option key={r} value={r} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{r}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
                   </div>
                   <div>
                     <label className={labelCls}>Status Akun</label>
-                    <select value={form.status} onChange={e => setForm(f=>({...f, status:e.target.value as UserStatus}))} className={`${inputCls} cursor-pointer`}>
-                      {STATUSES.map(s => <option key={s} value={s} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{s}</option>)}
-                    </select>
+                    <div className="relative">
+                      <select
+                        disabled={form.role === 'Admin'}
+                        value={form.role === 'Admin' ? 'Aktif' : form.status}
+                        onChange={e => setForm(f=>({...f, status:e.target.value as UserStatus}))}
+                        className={`${inputCls} appearance-none pr-10 ${form.role === 'Admin' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                      >
+                        {STATUSES.map(s => <option key={s} value={s} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{s}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
                 <div>
@@ -474,7 +506,7 @@ export default function ManajemenUserPage() {
                     <select
                       value={form.employeeId ?? ''}
                       onChange={e => setForm(f=>({...f, employeeId: e.target.value || ''}))}
-                      className={`${inputCls} pl-10 cursor-pointer`}
+                      className={`${inputCls} pl-10 pr-10 appearance-none cursor-pointer`}
                     >
                       <option value="" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">— Tidak dikaitkan —</option>
                       {/* Show currently linked employee if editing */}

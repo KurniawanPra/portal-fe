@@ -90,19 +90,33 @@ export async function apiFetch<T = unknown>(
   let res = await fetch(url, { ...options, headers });
 
   // If 401, try refresh token once
-  if (res.status === 401 && token) {
-    const refreshed = await tryRefreshToken();
-    if (refreshed) {
-      const newToken = getAccessToken();
-      if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
-      res = await fetch(url, { ...options, headers });
-    } else {
-      clearTokens();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+  if (res.status === 401) {
+    if (token) {
+      const refreshed = await tryRefreshToken();
+      if (refreshed) {
+        const newToken = getAccessToken();
+        if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
+        res = await fetch(url, { ...options, headers });
+        if (res.status !== 401) {
+          // If retried request succeeds, handle it and return
+          if (res.status === 204) {
+            return { success: true, data: null as T };
+          }
+          const json = await res.json();
+          if (!json.success) {
+            const apiErr = json as ApiError;
+            throw new Error(apiErr.error || 'Request gagal');
+          }
+          return json as ApiResponse<T>;
+        }
       }
-      throw new Error('Session expired');
     }
+
+    clearTokens();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    throw new Error('Session expired');
   }
 
   // 204 No Content (for DELETE)

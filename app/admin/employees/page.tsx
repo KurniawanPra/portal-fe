@@ -4,11 +4,12 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Phone, MapPin, Briefcase, Building2, UserCheck, UserX,
-  IdCard, Loader2
+  IdCard, Loader2, ChevronDown
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { api } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type JenisKelamin = 'L' | 'P';
@@ -32,6 +33,9 @@ interface ApiEmployee {
   createdAt: string;
   updatedAt: string;
   fotoProfil: string | null;
+  statusKaryawanId: string | null;
+  pendidikanTerakhirId: string | null;
+  statusPernikahanId: string | null;
 }
 
 interface UnitOrganisasi {
@@ -40,6 +44,7 @@ interface UnitOrganisasi {
   kode: string;
   tipe: string;
   isActive: boolean;
+  parentId: string | null;
 }
 
 interface EmployeeData {
@@ -58,6 +63,11 @@ interface EmployeeData {
   alamat: string;
   isActive: boolean;
   createdAt: string;
+  gradeId: string;
+  statusKaryawanId: string;
+  pendidikanTerakhirId: string;
+  statusPernikahanId: string;
+  fotoProfil: string;
 }
 
 // Color palettes
@@ -84,11 +94,41 @@ const GENDER_AVATAR: Record<JenisKelamin, string> = {
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
 const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400';
 
-type FormData = Omit<EmployeeData, 'id' | 'createdAt' | 'unitOrganisasiNama'>;
+const getLabel = (t: string) => {
+  if (t === 'direktorat') return 'Direktorat';
+  if (t === 'sevp') return 'SEVP';
+  if (t === 'bagian') return 'Bagian';
+  if (t === 'sub_bagian') return 'Sub Bagian';
+  if (t === 'seksi') return 'Seksi';
+  return t;
+};
+
+interface FormData {
+  nrk: string;
+  nik: string;
+  nama: string;
+  jenisKelamin: JenisKelamin;
+  jabatan: string;
+  tanggalMasuk: string;
+  tempatLahir: string;
+  tanggalLahir: string;
+  nomorHp: string;
+  alamat: string;
+  isActive: boolean;
+  unitPath: string[];
+  gradeId: string;
+  statusKaryawanId: string;
+  pendidikanTerakhirId: string;
+  statusPernikahanId: string;
+}
 const emptyForm: FormData = {
   nrk: '', nik: '', nama: '', jenisKelamin: 'L', jabatan: '',
-  unitOrganisasiId: '', tanggalMasuk: '', tempatLahir: '',
-  tanggalLahir: '', nomorHp: '', alamat: '', isActive: true,
+  tanggalMasuk: '', tempatLahir: '', tanggalLahir: '', nomorHp: '', alamat: '', isActive: true,
+  unitPath: [],
+  gradeId: '',
+  statusKaryawanId: '',
+  pendidikanTerakhirId: '',
+  statusPernikahanId: '',
 };
 
 export default function ManajemenEmployeePage() {
@@ -105,6 +145,34 @@ export default function ManajemenEmployeePage() {
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editTarget,   setEditTarget]   = useState<EmployeeData | null>(null);
   const [form,         setForm]         = useState<FormData>(emptyForm);
+  const [unitSearch,   setUnitSearch]   = useState('');
+  const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
+
+  const [grades,            setGrades]            = useState<any[]>([]);
+  const [statusKaryawans,   setStatusKaryawans]   = useState<any[]>([]);
+  const [pendidikans,       setPendidikans]       = useState<any[]>([]);
+  const [statusPernikahans, setStatusPernikahans] = useState<any[]>([]);
+  const [photoFile,         setPhotoFile]         = useState<File | null>(null);
+
+  const getUnitPathStr = useCallback((unitId: string) => {
+    let curr = unitOrganisasis.find(u => u.id === unitId);
+    const path: string[] = [];
+    while (curr) {
+      path.unshift(curr.nama);
+      const pId = curr.parentId;
+      curr = pId ? unitOrganisasis.find(u => u.id === pId) : undefined;
+    }
+    return path.join(' > ');
+  }, [unitOrganisasis]);
+
+  const filteredUnits = useMemo(() => {
+    const q = unitSearch.toLowerCase();
+    return unitOrganisasis.filter(u => {
+      const matchSearch = u.nama.toLowerCase().includes(q) || u.kode.toLowerCase().includes(q);
+      const isSelected = form.unitPath[form.unitPath.length - 1] === u.id;
+      return matchSearch && (u.isActive || isSelected);
+    });
+  }, [unitOrganisasis, unitSearch, form.unitPath]);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeData | null>(null);
   const [toast,        setToast]        = useState<{ type:'ok'|'err'; text:string } | null>(null);
 
@@ -113,14 +181,22 @@ export default function ManajemenEmployeePage() {
   // ─── Fetch Data ────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     try {
-      const [empRes, orgRes] = await Promise.all([
+      const [empRes, orgRes, gradeRes, statusRes, eduRes, marRes] = await Promise.all([
         api.get<ApiEmployee[]>('/employees?limit=200'),
         api.get<UnitOrganisasi[]>('/org/unit?limit=200'),
+        api.get<any[]>('/master/grade'),
+        api.get<any[]>('/master/status-karyawan'),
+        api.get<any[]>('/master/pendidikan'),
+        api.get<any[]>('/master/status-pernikahan'),
       ]);
 
       const orgMap = new Map<string, string>();
       (orgRes.data || []).forEach(o => orgMap.set(o.id, o.nama));
       setUnitOrganisasis(orgRes.data || []);
+      setGrades(gradeRes.data || []);
+      setStatusKaryawans(statusRes.data || []);
+      setPendidikans(eduRes.data || []);
+      setStatusPernikahans(marRes.data || []);
 
       const mapped: EmployeeData[] = (empRes.data || []).map(e => ({
         id: e.id,
@@ -138,6 +214,11 @@ export default function ManajemenEmployeePage() {
         alamat: e.alamat || '',
         isActive: e.isActive,
         createdAt: e.createdAt ? e.createdAt.slice(0, 10) : '-',
+        gradeId: e.gradeId || '',
+        statusKaryawanId: e.statusKaryawanId || '',
+        pendidikanTerakhirId: e.pendidikanTerakhirId || '',
+        statusPernikahanId: e.statusPernikahanId || '',
+        fotoProfil: e.fotoProfil || '',
       }));
 
       setEmployees(mapped);
@@ -163,57 +244,116 @@ export default function ManajemenEmployeePage() {
     });
   }, [employees, search, filterStatus, filterGender]);
 
-  const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setModalOpen(true); }, []);
+  const openCreate = useCallback(() => {
+    setEditTarget(null);
+    setForm(emptyForm);
+    setUnitSearch('');
+    setUnitDropdownOpen(false);
+    setPhotoFile(null);
+    setModalOpen(true);
+  }, []);
+
   const openEdit   = useCallback((e: EmployeeData) => {
     setEditTarget(e);
+
+    let unitPath: string[] = [];
+    if (e.unitOrganisasiId) {
+      let path: string[] = [];
+      let curr = unitOrganisasis.find(u => u.id === e.unitOrganisasiId);
+      while (curr) {
+        path.push(curr.id);
+        const pId = curr.parentId;
+        curr = pId ? unitOrganisasis.find(u => u.id === pId) : undefined;
+      }
+      unitPath = path.reverse();
+    }
+
     setForm({
       nrk: e.nrk,
       nik: e.nik,
       nama: e.nama,
       jenisKelamin: e.jenisKelamin,
       jabatan: e.jabatan,
-      unitOrganisasiId: e.unitOrganisasiId,
       tanggalMasuk: e.tanggalMasuk,
       tempatLahir: e.tempatLahir,
       tanggalLahir: e.tanggalLahir,
       nomorHp: e.nomorHp,
       alamat: e.alamat,
       isActive: e.isActive,
+      unitPath,
+      gradeId: e.gradeId,
+      statusKaryawanId: e.statusKaryawanId,
+      pendidikanTerakhirId: e.pendidikanTerakhirId,
+      statusPernikahanId: e.statusPernikahanId,
     });
+    setUnitSearch('');
+    setUnitDropdownOpen(false);
+    setPhotoFile(null);
     setModalOpen(true);
-  }, []);
+  }, [unitOrganisasis]);
 
   // ─── Save (Create/Update) ──────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
-    if (!form.nama.trim())                      { showToast('err', 'Nama wajib diisi.'); return; }
+    if (!form.nama.trim())                      { showToast('err', 'Nama Lengkap wajib diisi.'); return; }
     if (!form.nrk.trim())                       { showToast('err', 'NRK wajib diisi.'); return; }
-    if (!form.nik.trim() || form.nik.length !== 16) { showToast('err', 'NIK harus 16 digit.'); return; }
+    if (!form.nik.trim())                       { showToast('err', 'NIK wajib diisi.'); return; }
+    if (form.nik.length !== 16)                 { showToast('err', 'NIK harus 16 digit.'); return; }
     if (!form.jabatan.trim())                   { showToast('err', 'Jabatan wajib diisi.'); return; }
+    if (form.unitPath.length === 0)             { showToast('err', 'Unit Organisasi wajib diisi.'); return; }
+    if (!form.tempatLahir.trim())               { showToast('err', 'Tempat Lahir wajib diisi.'); return; }
+    if (!form.tanggalLahir)                     { showToast('err', 'Tanggal Lahir wajib diisi.'); return; }
+    if (!form.tanggalMasuk)                     { showToast('err', 'Tanggal Masuk wajib diisi.'); return; }
+    if (!form.nomorHp.trim())                   { showToast('err', 'Nomor HP wajib diisi.'); return; }
+    if (!form.alamat.trim())                    { showToast('err', 'Alamat wajib diisi.'); return; }
 
     setSaving(true);
     try {
+      const unitId = form.unitPath[form.unitPath.length - 1] || null;
       const payload = {
         nrk: form.nrk,
         nik: form.nik,
         nama: form.nama,
         jenisKelamin: form.jenisKelamin,
         jabatan: form.jabatan,
-        unitOrganisasiId: form.unitOrganisasiId || null,
+        unitOrganisasiId: unitId,
         tanggalMasuk: form.tanggalMasuk || null,
         tempatLahir: form.tempatLahir || null,
         tanggalLahir: form.tanggalLahir || null,
         nomorHp: form.nomorHp || null,
         alamat: form.alamat || null,
         isActive: form.isActive,
+        gradeId: form.gradeId || null,
+        statusKaryawanId: form.statusKaryawanId || null,
+        pendidikanTerakhirId: form.pendidikanTerakhirId || null,
+        statusPernikahanId: form.statusPernikahanId || null,
       };
 
+      let employeeId = '';
       if (editTarget) {
         await api.put(`/employees/${editTarget.id}`, payload);
+        employeeId = editTarget.id;
         showToast('ok', `"${form.nama}" berhasil diperbarui.`);
       } else {
-        await api.post('/employees', payload);
+        const res = await api.post<any>('/employees', payload);
+        employeeId = res.data.id;
         showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
       }
+
+      // Photo upload if selected
+      if (photoFile && employeeId) {
+        const fd = new FormData();
+        fd.append('foto', photoFile);
+        const token = getAccessToken();
+        const uploadRes = await fetch(`/api/employees/${employeeId}/photo`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: fd,
+        });
+        if (!uploadRes.ok) {
+          throw new Error('Gagal mengunggah foto profil.');
+        }
+      }
+
       setModalOpen(false);
       setLoading(true);
       await fetchData();
@@ -222,7 +362,7 @@ export default function ManajemenEmployeePage() {
     } finally {
       setSaving(false);
     }
-  }, [form, editTarget, fetchData]);
+  }, [form, editTarget, photoFile, fetchData]);
 
   // ─── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async () => {
@@ -268,7 +408,7 @@ export default function ManajemenEmployeePage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-[9998] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type==='ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
+        <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type==='ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
           {toast.type==='ok' ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400"/> : <AlertCircle className="h-4 w-4 shrink-0 text-rose-400"/>}
           {toast.text}
         </div>
@@ -371,9 +511,17 @@ export default function ManajemenEmployeePage() {
                   {/* Employee */}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-sm text-white bg-gradient-to-br ${GENDER_AVATAR[e.jenisKelamin]}`}>
-                        {e.nama.charAt(0)}
-                      </div>
+                      {e.fotoProfil ? (
+                        <img 
+                          src={e.fotoProfil.startsWith('http') ? e.fotoProfil : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/uploads/${e.fotoProfil}`} 
+                          alt={e.nama} 
+                          className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]" 
+                        />
+                      ) : (
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-sm text-white bg-gradient-to-br ${GENDER_AVATAR[e.jenisKelamin]}`}>
+                          {e.nama.charAt(0)}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{e.nama}</p>
                         <div className="flex items-center gap-1 mt-0.5">
@@ -462,7 +610,7 @@ export default function ManajemenEmployeePage() {
                   <X className="h-4 w-4" />
                 </button>
               </div>
-              <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
+              <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto hide-scrollbar">
                 {/* Nama */}
                 <div>
                   <label className={labelCls}>Nama Lengkap *</label>
@@ -483,27 +631,140 @@ export default function ManajemenEmployeePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Jenis Kelamin *</label>
-                    <select value={form.jenisKelamin} onChange={e => setForm(f=>({...f, jenisKelamin: e.target.value as JenisKelamin}))} className={`${inputCls} cursor-pointer`}>
-                      <option value="L" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Laki-laki</option>
-                      <option value="P" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Perempuan</option>
-                    </select>
+                    <div className="relative">
+                      <select value={form.jenisKelamin} onChange={e => setForm(f=>({...f, jenisKelamin: e.target.value as JenisKelamin}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
+                        <option value="L" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Laki-laki</option>
+                        <option value="P" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Perempuan</option>
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
                   </div>
                   <div>
                     <label className={labelCls}>Jabatan *</label>
                     <input type="text" value={form.jabatan} onChange={e => setForm(f=>({...f, jabatan:e.target.value}))} placeholder="cth: IT Specialist" className={inputCls} />
                   </div>
                 </div>
-                {/* Unit Organisasi */}
-                <div>
-                  <label className={labelCls}>Unit Organisasi</label>
+
+                {/* Searchable Unit Organisasi Dropdown */}
+                <div className="space-y-3 p-3.5 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
+                  <div className="text-[10px] font-black uppercase tracking-wide text-slate-550 dark:text-slate-400 mb-1">Unit Organisasi</div>
+                  
+                  {/* Selected Unit Parent Path (Hierarki di Atasnya) */}
+                  {form.unitPath.length > 0 && (
+                    <div className="rounded-lg bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 dark:border-amber-500/20 p-2.5 space-y-1">
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-500">Struktur Parent (Atasan)</div>
+                      <div className="text-xs font-semibold text-slate-700 dark:text-slate-300 leading-relaxed">
+                        {form.unitPath.slice(0, -1).map((uid) => {
+                          const unit = unitOrganisasis.find(u => u.id === uid);
+                          return unit ? `${unit.nama} (${getLabel(unit.tipe)})` : '';
+                        }).filter(Boolean).join(' ➔ ') || <span className="text-slate-450 italic text-[10px]">Unit ini adalah Level Utama (Root)</span>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dropdown Input / Trigger */}
                   <div className="relative">
-                    <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <select value={form.unitOrganisasiId} onChange={e => setForm(f=>({...f, unitOrganisasiId:e.target.value}))} className={`${inputCls} pl-10 cursor-pointer`}>
-                      <option value="" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-400">- Pilih Unit Organisasi -</option>
-                      {unitOrganisasis.map(u => <option key={u.id} value={u.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{u.nama}</option>)}
-                    </select>
+                    <label className={labelCls}>Pilih Unit Kerja *</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      <div
+                        onClick={() => setUnitDropdownOpen(o => !o)}
+                        className={`${inputCls} pl-10 pr-10 cursor-pointer flex items-center justify-between min-h-[42px]`}
+                      >
+                        {form.unitPath.length > 0 ? (
+                          <span className="truncate text-slate-800 dark:text-slate-200">
+                            {(() => {
+                              const selectedId = form.unitPath[form.unitPath.length - 1];
+                              const selectedUnit = unitOrganisasis.find(u => u.id === selectedId);
+                              return selectedUnit ? `${selectedUnit.nama} (${getLabel(selectedUnit.tipe)})` : 'Pilih Unit Kerja';
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 dark:text-slate-500">- Pilih Unit Kerja -</span>
+                        )}
+                        <ChevronDown className="h-4.5 w-4.5 text-slate-400 dark:text-slate-500 transition-transform duration-200" />
+                      </div>
+                    </div>
+
+                    {/* Popover list */}
+                    {unitDropdownOpen && (
+                      <>
+                        {/* Overlay to close popover when clicking outside */}
+                        <div className="fixed inset-0 z-45" onClick={() => setUnitDropdownOpen(false)} />
+                        
+                        <div className="absolute left-0 right-0 mt-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0a0f1a] shadow-xl p-2 z-50 space-y-1.5">
+                          {/* Search Input Box */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                            <input
+                              type="text"
+                              value={unitSearch}
+                              onChange={(e) => setUnitSearch(e.target.value)}
+                              placeholder="Cari unit..."
+                              className="w-full rounded-lg border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#070b12] py-1.5 pl-9 pr-3 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500/50 focus:bg-white dark:focus:bg-[#0a0f1a]"
+                              autoFocus
+                            />
+                          </div>
+
+                          {/* Options List */}
+                          <style dangerouslySetInnerHTML={{ __html: `
+                            .no-scrollbar::-webkit-scrollbar {
+                              display: none;
+                            }
+                          ` }} />
+                          <div 
+                            className="max-h-48 overflow-y-auto space-y-0.5 pr-1 no-scrollbar"
+                            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                          >
+                            {filteredUnits.length > 0 ? (
+                              filteredUnits.map((u) => {
+                                const isSelected = form.unitPath[form.unitPath.length - 1] === u.id;
+                                return (
+                                  <button
+                                    key={u.id}
+                                    type="button"
+                                    onClick={() => {
+                                      let path: string[] = [];
+                                      let curr = unitOrganisasis.find(unit => unit.id === u.id);
+                                      while (curr) {
+                                        path.unshift(curr.id);
+                                        const pId = curr.parentId;
+                                        curr = pId ? unitOrganisasis.find(unit => unit.id === pId) : undefined;
+                                      }
+                                      setForm(f => ({ ...f, unitPath: path }));
+                                      setUnitDropdownOpen(false);
+                                      setUnitSearch('');
+                                    }}
+                                    className={`w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 flex flex-col gap-0.5 hover:bg-slate-100 dark:hover:bg-white/[0.03] ${
+                                      isSelected
+                                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border-l-2 border-amber-500 pl-2 rounded-l-none'
+                                        : 'text-slate-700 dark:text-slate-300'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <span>{u.nama}</span>
+                                      <span className="rounded bg-slate-200/50 dark:bg-white/[0.06] px-1.5 py-0.5 text-[8px] font-semibold text-slate-555 dark:text-slate-400">
+                                        {getLabel(u.tipe)}
+                                      </span>
+                                    </div>
+                                    <div className="text-[9px] font-semibold text-slate-450 dark:text-slate-555 truncate">
+                                      {getUnitPathStr(u.id)}
+                                    </div>
+                                  </button>
+                                );
+                              })
+                            ) : (
+                              <div className="text-center py-4 text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                Tidak ada unit ditemukan
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
+
                 {/* Tempat Lahir & Tanggal Lahir */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -523,12 +784,118 @@ export default function ManajemenEmployeePage() {
                   </div>
                   <div>
                     <label className={labelCls}>Status</label>
-                    <select value={form.isActive ? 'true' : 'false'} onChange={e => setForm(f=>({...f, isActive: e.target.value === 'true'}))} className={`${inputCls} cursor-pointer`}>
-                      <option value="true" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Aktif</option>
-                      <option value="false" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Non-Aktif</option>
-                    </select>
+                    <div className="relative">
+                      <select value={form.isActive ? 'true' : 'false'} onChange={e => setForm(f=>({...f, isActive: e.target.value === 'true'}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
+                        <option value="true" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Aktif</option>
+                        <option value="false" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Non-Aktif</option>
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
+
+                {/* Grade & Status Karyawan */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Grade / Golongan</label>
+                    <div className="relative">
+                      <select value={form.gradeId} onChange={e => setForm(f=>({...f, gradeId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
+                        <option value="" className="text-slate-400">- Pilih Grade -</option>
+                        {grades.map(g => (
+                          <option key={g.id} value={g.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
+                            {g.kode} - {g.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Status Karyawan</label>
+                    <div className="relative">
+                      <select value={form.statusKaryawanId} onChange={e => setForm(f=>({...f, statusKaryawanId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
+                        <option value="" className="text-slate-400">- Pilih Status -</option>
+                        {statusKaryawans.map(s => (
+                          <option key={s.id} value={s.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pendidikan & Status Pernikahan */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Pendidikan Terakhir</label>
+                    <div className="relative">
+                      <select value={form.pendidikanTerakhirId} onChange={e => setForm(f=>({...f, pendidikanTerakhirId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
+                        <option value="" className="text-slate-400">- Pilih Pendidikan -</option>
+                        {pendidikans.map(p => (
+                          <option key={p.id} value={p.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Status Pernikahan</label>
+                    <div className="relative">
+                      <select value={form.statusPernikahanId} onChange={e => setForm(f=>({...f, statusPernikahanId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
+                        <option value="" className="text-slate-400">- Pilih Status -</option>
+                        {statusPernikahans.map(m => (
+                          <option key={m.id} value={m.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
+                            {m.label}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Foto Profil Upload */}
+                <div className="space-y-2">
+                  <label className={labelCls}>Foto Profil</label>
+                  <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
+                    <div className="shrink-0">
+                      {photoFile ? (
+                        <img
+                          src={URL.createObjectURL(photoFile)}
+                          alt="Preview"
+                          className="h-14 w-14 rounded-xl object-cover border-2 border-amber-500"
+                        />
+                      ) : editTarget && editTarget.fotoProfil ? (
+                        <img
+                          src={editTarget.fotoProfil.startsWith('http') ? editTarget.fotoProfil : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/uploads/${editTarget.fotoProfil}`}
+                          alt="Current"
+                          className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-white/[0.08]"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xl">
+                          ?
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setPhotoFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500/10 file:text-amber-600 dark:file:text-amber-400 hover:file:bg-amber-500/20 cursor-pointer"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Format: JPG, PNG, GIF. Max 2MB.</p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Nomor HP */}
                 <div>
                   <label className={labelCls}>Nomor HP</label>

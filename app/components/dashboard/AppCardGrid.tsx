@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { api } from '@/lib/api';
 import { 
   Clock, 
   BookOpen, 
@@ -185,9 +186,12 @@ const getAuthBadgeClass = (appName: string, authMode: string) => {
   }
 
   switch (authMode.toUpperCase()) {
+    case 'SSO':
     case 'SSO-OAUTH2':
       return 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30';
+    case 'INDEPENDENT':
     case 'SSO-SAML':
+    case 'API-KEY':
       return 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30';
     default:
       return 'bg-slate-50 dark:bg-slate-900/20 text-slate-700 dark:text-slate-400 border-slate-150 dark:border-slate-800/30';
@@ -204,6 +208,24 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
           app.deskripsi.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => a.urutan - b.urutan);
+
+  const handleOpenApp = async (e: React.MouseEvent<HTMLAnchorElement>, app: Aplikasi) => {
+    if (app.auth_mode !== 'sso') {
+      // Allow default link navigation for independent apps
+      return;
+    }
+    e.preventDefault();
+    try {
+      const res = await api.get<{ token: string; redirectUrl: string }>(`/sso/token?app_id=${app.id}`);
+      const token = res.data.token;
+      const baseUrl = res.data.redirectUrl || app.url;
+      const separator = baseUrl.includes('?') ? '&' : '?';
+      const finalUrl = `${baseUrl}${separator}token=${token}`;
+      window.open(finalUrl, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal menginisialisasi login SSO.');
+    }
+  };
 
   return (
     <div className="w-full">
@@ -269,6 +291,7 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
                       href={app.url}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => handleOpenApp(e, app)}
                       className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${getBrandButtonClass(
                         app.nama
                       )}`}

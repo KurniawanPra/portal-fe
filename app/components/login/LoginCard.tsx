@@ -115,7 +115,13 @@ export default function LoginCard() {
         )}
 
         {/* Input Fields */}
-        <div className="login-card-fields-spacing space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSubmit();
+          }}
+          className="login-card-fields-spacing space-y-4"
+        >
           <div>
             <label className="mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Username atau Email
@@ -165,6 +171,7 @@ export default function LoginCard() {
                 checked={remember}
                 onChange={setRemember}
                 variant="portal"
+                type="button"
               />
               Ingat saya
             </label>
@@ -179,10 +186,9 @@ export default function LoginCard() {
 
           {/* Submit Button */}
           <LiquidButton
-            type="button"
+            type="submit"
             variant="outline"
             size="login"
-            onClick={handleSubmit}
             disabled={loading}
             className="login-card-button flex w-full items-center justify-center cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 focus:ring-2 focus:ring-brand/20 focus:outline-none"
           >
@@ -195,7 +201,7 @@ export default function LoginCard() {
               'Masuk Ke Portal'
             )}
           </LiquidButton>
-        </div>
+        </form>
 
         {/* Divider */}
         {/* <div className="my-5 sm:my-6 flex items-center gap-3">

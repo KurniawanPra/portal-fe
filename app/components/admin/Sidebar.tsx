@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutGrid, Users, LogOut, Database, UserCog } from 'lucide-react';
+import { Home, LayoutGrid, Users, LogOut, Database, UserCog, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sidebar as RadixSidebar,
@@ -36,6 +36,7 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
     { id: 'aplikasi',   label: 'Manajemen Aplikasi',    path: '/admin/aplikasi',    icon: LayoutGrid  },
     { id: 'users',      label: 'Manajemen User',        path: '/admin/users',       icon: Users       },
     { id: 'employees',  label: 'Manajemen Employee',    path: '/admin/employees',   icon: UserCog     },
+    { id: 'organisasi', label: 'Unit Organisasi',       path: '/admin/organisasi',  icon: GitBranch   },
     { id: 'master',     label: 'Master Data',           path: '/admin/master',      icon: Database    },
   ];
 

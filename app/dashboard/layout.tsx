@@ -1,34 +1,29 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Navbar from '@/components/dashboard/Navbar';
 import { SidebarProvider, SidebarInset } from '@/components/animate-ui/components/radix/sidebar';
+import { api } from '@/lib/api';
+import { getAccessToken, clearTokens } from '@/lib/auth';
+import { Loader2 } from 'lucide-react';
 
-// --- MOCK PROFILE INFO (MATCHING ERD TABLES) ---
-const MOCK_BAGIAN = {
-  id: 'bag-1',
-  nama: 'Teknologi Informasi & Digital',
-  kode: 'TID',
-  is_active: true,
-};
+interface MeResponse {
+  id: string;
+  email: string;
+  role: 'user' | 'super_admin';
+  isActive: boolean;
+  employeeId: string | null;
+}
 
-const MOCK_SUB_BAGIAN = {
-  id: 'sub-1',
-  nama: 'Infrastruktur, Jaringan & Keamanan',
-  kode: 'IJK',
-  bagian_id: 'bag-1',
-  is_active: true,
-};
-
-const MOCK_EMPLOYEE = {
-  id: 'emp-92301',
-  nama: 'Budi Santoso, S.T.',
-  jabatan: 'IT Lead Specialist',
-  bagian: MOCK_BAGIAN,
-  sub_bagian: MOCK_SUB_BAGIAN,
-};
+interface UnitOrganisasi {
+  id: string;
+  nama: string;
+  kode: string;
+  tipe: string;
+  parentId: string | null;
+}
 
 export default function DashboardLayout({
   children,
@@ -36,11 +31,92 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+  const [employee, setEmployee] = useState<{
+    nama: string;
+    jabatan: string;
+    bagian: { nama: string };
+    foto_profil?: string;
+  } | null>(null);
 
-  const handleLogout = () => {
-    console.log('[Portal SSO] Logging out user');
-    router.push('/login');
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = getAccessToken();
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      try {
+        const meRes = await api.get<MeResponse>('/auth/me');
+        const user = meRes.data;
+
+        if (user.employeeId) {
+          const [empRes, unitRes] = await Promise.all([
+            api.get<any>(`/employees/${user.employeeId}`),
+            api.get<UnitOrganisasi[]>('/org/unit?limit=200'),
+          ]);
+          const emp = empRes.data;
+          const units = unitRes.data || [];
+          const unit = units.find(u => u.id === emp.unitOrganisasiId);
+          setEmployee({
+            nama: emp.nama,
+            jabatan: emp.jabatan,
+            bagian: { nama: unit ? unit.nama : '-' },
+            foto_profil: emp.fotoProfil || undefined,
+          });
+        } else {
+          let nameFallback = 'Administrator';
+          let titleFallback = user.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          let bagianFallback = 'Portal Admin';
+
+          if (user.email === 'admin@inl.co.id') {
+            nameFallback = 'Budi Santoso, S.T.';
+            titleFallback = 'IT Lead Specialist';
+            bagianFallback = 'Teknologi Informasi & Digital';
+          } else {
+            const localPart = user.email.split('@')[0];
+            nameFallback = localPart
+              .split(/[\._-]/)
+              .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+              .join(' ');
+            titleFallback = user.role === 'super_admin' ? 'Super Admin' : 'User Portal';
+            bagianFallback = 'Non-Karyawan';
+          }
+
+          setEmployee({
+            nama: nameFallback,
+            jabatan: titleFallback,
+            bagian: { nama: bagianFallback },
+          });
+        }
+        setAuthorized(true);
+      } catch {
+        clearTokens();
+        router.push('/login');
+      }
+    };
+    checkAuth();
+  }, [router]);
+
+  const handleLogout = async () => {
+    try {
+      await api.post('/auth/logout', {});
+    } catch {
+      // Ignore
+    } finally {
+      clearTokens();
+      router.push('/login');
+    }
   };
+
+  if (!authorized || !employee) {
+    return (
+      <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-50 dark:bg-[#0e1118] gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <span className="text-sm font-semibold text-slate-550 dark:text-slate-400">Memverifikasi sesi...</span>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -56,7 +132,7 @@ export default function DashboardLayout({
 
         {/* Sidebar Component */}
         <Sidebar
-          employee={MOCK_EMPLOYEE}
+          employee={employee}
           onLogout={handleLogout}
         />
 
@@ -65,7 +141,7 @@ export default function DashboardLayout({
           {/* Navbar with Suspense for useSearchParams */}
           <Suspense fallback={<div className="h-20 w-full bg-white/40 border-b border-white/60 animate-pulse" />}>
             <Navbar
-              employee={MOCK_EMPLOYEE}
+              employee={employee}
             />
           </Suspense>
 

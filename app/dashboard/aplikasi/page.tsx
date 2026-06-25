@@ -1,86 +1,62 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppCardGrid from '@/components/dashboard/AppCardGrid';
+import { api } from '@/lib/api';
+import { Loader2 } from 'lucide-react';
 
-// --- MOCK DATABASE WITH RICH PLATFORM DESCRIPTIONS ---
-const MOCK_APLIKASI = [
-  {
-    id: 'app-google',
-    nama: 'Google Workspace',
-    url: 'https://workspace.google.com',
-    auth_mode: 'SSO-OAuth2',
-    icon: 'Google',
-    deskripsi: 'Kolaborasi tanpa batas menggunakan Gmail korporat, penyimpanan cloud bersama (Drive) terpusat, pengolah kata Docs, Sheets, serta Meet untuk rapat koordinasi daring.',
-    urutan: 1,
-    is_active: true,
-  },
-  {
-    id: 'app-youtube',
-    nama: 'YouTube Studio',
-    url: 'https://studio.youtube.com',
-    auth_mode: 'API-Key',
-    icon: 'YouTube',
-    deskripsi: 'Dashboard manajemen video publisitas PT INL. Unggah konten video promosi, kelola hak siar publisitas, pantau analitik penonton, serta optimasi SEO konten digital.',
-    urutan: 2,
-    is_active: true,
-  },
-  {
-    id: 'app-facebook',
-    nama: 'Workplace Facebook',
-    url: 'https://workplace.com',
-    auth_mode: 'SSO-SAML',
-    icon: 'Facebook',
-    deskripsi: 'Jejaring sosial internal PT INL. Lakukan siaran langsung pengumuman direksi secara interaktif, bagikan kabar divisi, dan bangun komunikasi komunitas kerja yang aktif.',
-    urutan: 3,
-    is_active: true,
-  },
-  {
-    id: 'app-1',
-    nama: 'Mobile Legends: Bang Bang',
-    url: 'https://m.mobilelegends.com',
-    auth_mode: 'SSO-OAuth2',
-    icon: 'MLBB',
-    deskripsi: 'Pertempuran MOBA 5v5 secara real-time melawan pemain asli. Pilih hero favoritmu, bangun tim terkuat, hancurkan turret musuh, dan capai rank Mythic bersama teman-teman!',
-    urutan: 4,
-    is_active: true,
-  },
-  {
-    id: 'app-2',
-    nama: 'PUBG Mobile',
-    url: 'https://www.pubgmobile.com',
-    auth_mode: 'SSO-SAML',
-    icon: 'PUBG',
-    deskripsi: 'Game battle royale multiplayer legendaris. Terjun payung di peta luas, kumpulkan senjata terbaik, bertahan dari zona biru, kalahkan 99 pemain lain, dan dapatkan Winner Winner Chicken Dinner!',
-    urutan: 5,
-    is_active: true,
-  },
-  {
-    id: 'app-3',
-    nama: 'Valorant',
-    url: 'https://playvalorant.com',
-    auth_mode: 'SSO-OAuth2',
-    icon: 'Valorant',
-    deskripsi: 'Penembak taktis 5v5 berbasis karakter yang memadukan keahlian menembak presisi tinggi dengan kemampuan agen khusus. Pasang Spike, pertahankan site, dan menangkan pertandingan!',
-    urutan: 6,
-    is_active: true,
-  },
-  {
-    id: 'app-4',
-    nama: 'Genshin Impact',
-    url: 'https://genshin.hoyoverse.com',
-    auth_mode: 'SSO-SAML',
-    icon: 'Genshin',
-    deskripsi: 'Jelajahi dunia fantasi luas Teyvat yang penuh dengan misteri, pertarungan elemen dinamis, dan petualangan seru. Rekrut berbagai karakter unik dan ungkap rahasia dunia yang hilang.',
-    urutan: 7,
-    is_active: true,
-  },
-];
+interface ApiAplikasi {
+  id: string;
+  nama: string;
+  url: string;
+  authMode: 'sso' | 'independent';
+  icon: string | null;
+  deskripsi: string | null;
+  urutan: number;
+  isActive: boolean;
+}
+
+interface Aplikasi {
+  id: string;
+  nama: string;
+  url: string;
+  auth_mode: string;
+  icon: string;
+  deskripsi: string;
+  urutan: number;
+  is_active: boolean;
+}
 
 function AplikasiContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
+  const [apps, setApps] = useState<Aplikasi[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchApps = async () => {
+      try {
+        const res = await api.get<ApiAplikasi[]>('/apps?limit=200&isActive=true');
+        const mapped: Aplikasi[] = (res.data || []).map((app) => ({
+          id: app.id,
+          nama: app.nama,
+          url: app.url,
+          auth_mode: app.authMode,
+          icon: app.icon || 'Clock',
+          deskripsi: app.deskripsi || '',
+          urutan: app.urutan,
+          is_active: app.isActive,
+        }));
+        setApps(mapped);
+      } catch (err) {
+        console.error('Gagal memuat data aplikasi:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchApps();
+  }, []);
 
   return (
     <div className="transition-colors duration-300">
@@ -120,14 +96,26 @@ function AplikasiContent() {
       </div>
 
       {/* Cards List Grid */}
-      <AppCardGrid apps={MOCK_APLIKASI} searchQuery={query} />
+      {loading ? (
+        <div className="flex items-center justify-center py-20 gap-3 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-slate-800/60 rounded-3xl p-8">
+          <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+          <span className="text-sm font-semibold text-slate-400">Memuat aplikasi...</span>
+        </div>
+      ) : (
+        <AppCardGrid apps={apps} searchQuery={query} />
+      )}
     </div>
   );
 }
 
 export default function AplikasiPage() {
   return (
-    <Suspense fallback={<div className="text-center py-10 font-bold text-slate-500 dark:text-slate-400">Memuat aplikasi...</div>}>
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-20 gap-3 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-slate-800/60 rounded-3xl p-8">
+        <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+        <span className="text-sm font-semibold text-slate-400">Memuat portal...</span>
+      </div>
+    }>
       <AplikasiContent />
     </Suspense>
   );

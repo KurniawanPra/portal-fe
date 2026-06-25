@@ -109,9 +109,17 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           state === 'collapsed' ? 'flex-col justify-center py-3 px-1' : 'justify-between px-3 py-2.5'
         )}>
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="flex h-8 w-8 shrink-0 place-items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-xs shadow-md">
-              {employee.nama.charAt(0)}
-            </div>
+            {employee.foto_profil ? (
+              <img
+                src={employee.foto_profil}
+                alt={employee.nama}
+                className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm border border-slate-200 dark:border-white/[0.08]"
+              />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 place-items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-xs shadow-md">
+                {employee.nama.charAt(0)}
+              </div>
+            )}
             {state === 'expanded' && (
               <div className="grid flex-1 text-left text-sm leading-tight animate-fade-in overflow-hidden">
                 <span className="truncate font-bold text-slate-800 dark:text-slate-200">{employee.nama}</span>
