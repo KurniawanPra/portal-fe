@@ -1,17 +1,24 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Mail, Building2, UserX, UserCheck, ShieldCheck,
-  ShieldAlert, Phone
+  ShieldAlert, Phone, UserCog, ChevronDown
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-type UserRole   = 'Admin' | 'User' | 'Viewer';
+type UserRole   = 'Admin' | 'User';
 type UserStatus = 'Aktif' | 'Suspended';
+
+interface EmployeeBrief {
+  id: string;
+  nama: string;
+  nrk: string;
+  jabatan: string;
+}
 
 interface UserData {
   id: string;
@@ -25,18 +32,29 @@ interface UserData {
   status: UserStatus;
   last_login: string;
   dibuat_pada: string;
+  employeeId?: string;
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-const INITIAL_USERS: UserData[] = [
-  { id: 'u-1', nama: 'Budi Santoso, S.T.',     email: 'budi.santoso@inl.co.id',     nrk: 'NRK-260901', nomor_hp: '0812-3456-7890', jabatan: 'IT Lead Specialist',       bagian: 'TID', role: 'Admin',  status: 'Aktif',     last_login: '2026-06-23T20:15:00', dibuat_pada: '2024-01-10' },
-  { id: 'u-2', nama: 'Hendra Gunawan',         email: 'hendra.gunawan@inl.co.id',   nrk: 'NRK-260902', nomor_hp: '0812-7654-3210', jabatan: 'Accounting Manager',       bagian: 'KEU', role: 'User',   status: 'Suspended', last_login: '2026-06-20T11:40:00', dibuat_pada: '2024-01-12' },
-  { id: 'u-3', nama: 'Citra Anggraini',        email: 'citra.anggraini@inl.co.id',  nrk: 'NRK-260903', nomor_hp: '0813-8888-9999', jabatan: 'HR Specialist',             bagian: 'SDM', role: 'User',   status: 'Aktif',     last_login: '2026-06-23T08:22:00', dibuat_pada: '2024-02-05' },
-  { id: 'u-4', nama: 'Rian Hidayat',           email: 'rian.hidayat@inl.co.id',     nrk: 'NRK-260904', nomor_hp: '0852-1111-2222', jabatan: 'Plant Operator',           bagian: 'OPR', role: 'Viewer', status: 'Aktif',     last_login: '2026-06-22T17:05:00', dibuat_pada: '2024-02-20' },
-  { id: 'u-5', nama: 'Dewi Lestari',           email: 'dewi.lestari@inl.co.id',     nrk: 'NRK-260905', nomor_hp: '0811-2222-3333', jabatan: 'Marketing Communicator',   bagian: 'MKT', role: 'User',   status: 'Aktif',     last_login: '2026-06-23T14:50:00', dibuat_pada: '2024-03-01' },
+const MOCK_EMPLOYEES: EmployeeBrief[] = [
+  { id: 'emp-1', nama: 'Budi Santoso, S.T.',   nrk: 'NRK-260901', jabatan: 'IT Lead Specialist'     },
+  { id: 'emp-2', nama: 'Hendra Gunawan',       nrk: 'NRK-260902', jabatan: 'Accounting Manager'     },
+  { id: 'emp-3', nama: 'Citra Anggraini',      nrk: 'NRK-260903', jabatan: 'HR Specialist'           },
+  { id: 'emp-4', nama: 'Rian Hidayat',         nrk: 'NRK-260904', jabatan: 'Plant Operator'          },
+  { id: 'emp-5', nama: 'Dewi Lestari',         nrk: 'NRK-260905', jabatan: 'Marketing Communicator'  },
+  { id: 'emp-6', nama: 'Agus Pratama',         nrk: 'NRK-260906', jabatan: 'Procurement Specialist'  },
+  { id: 'emp-7', nama: 'Siti Nurhaliza',       nrk: 'NRK-260907', jabatan: 'Legal Officer'            },
 ];
 
-const ROLES: UserRole[] = ['Admin', 'User', 'Viewer'];
+const INITIAL_USERS: UserData[] = [
+  { id: 'u-1', nama: 'Budi Santoso, S.T.',     email: 'budi.santoso@inl.co.id',     nrk: 'NRK-260901', nomor_hp: '0812-3456-7890', jabatan: 'IT Lead Specialist',       bagian: 'TID', role: 'Admin',  status: 'Aktif',     last_login: '2026-06-23T20:15:00', dibuat_pada: '2024-01-10', employeeId: 'emp-1' },
+  { id: 'u-2', nama: 'Hendra Gunawan',         email: 'hendra.gunawan@inl.co.id',   nrk: 'NRK-260902', nomor_hp: '0812-7654-3210', jabatan: 'Accounting Manager',       bagian: 'KEU', role: 'User',   status: 'Suspended', last_login: '2026-06-20T11:40:00', dibuat_pada: '2024-01-12', employeeId: 'emp-2' },
+  { id: 'u-3', nama: 'Citra Anggraini',        email: 'citra.anggraini@inl.co.id',  nrk: 'NRK-260903', nomor_hp: '0813-8888-9999', jabatan: 'HR Specialist',             bagian: 'SDM', role: 'User',   status: 'Aktif',     last_login: '2026-06-23T08:22:00', dibuat_pada: '2024-02-05', employeeId: 'emp-3' },
+  { id: 'u-4', nama: 'Rian Hidayat',           email: 'rian.hidayat@inl.co.id',     nrk: 'NRK-260904', nomor_hp: '0852-1111-2222', jabatan: 'Plant Operator',           bagian: 'OPR', role: 'User',   status: 'Aktif',     last_login: '2026-06-22T17:05:00', dibuat_pada: '2024-02-20', employeeId: 'emp-4' },
+  { id: 'u-5', nama: 'Dewi Lestari',           email: 'dewi.lestari@inl.co.id',     nrk: 'NRK-260905', nomor_hp: '0811-2222-3333', jabatan: 'Marketing Communicator',   bagian: 'MKT', role: 'User',   status: 'Aktif',     last_login: '2026-06-23T14:50:00', dibuat_pada: '2024-03-01', employeeId: 'emp-5' },
+];
+
+const ROLES: UserRole[] = ['Admin', 'User'];
 const STATUSES: UserStatus[] = ['Aktif', 'Suspended'];
 const BAGIANS = ['TID', 'KEU', 'SDM', 'OPR', 'MKT', 'LGL', 'LOG'];
 
@@ -44,7 +62,6 @@ const BAGIANS = ['TID', 'KEU', 'SDM', 'OPR', 'MKT', 'LGL', 'LOG'];
 const ROLE_BADGE: Record<UserRole, string> = {
   Admin:  'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
   User:   'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
-  Viewer: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
 };
 
 const STATUS_BADGE: Record<UserStatus, string> = {
@@ -60,14 +77,13 @@ const STATUS_DOT: Record<UserStatus, string> = {
 const ROLE_AVATAR: Record<UserRole, string> = {
   Admin:  'from-amber-400  to-amber-600',
   User:   'from-indigo-400 to-indigo-600',
-  Viewer: 'from-slate-500  to-slate-700',
 };
 
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
 const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400';
 
 type FormData = Omit<UserData, 'id' | 'last_login' | 'dibuat_pada'>;
-const emptyForm: FormData = { nama:'', email:'', nrk:'', nomor_hp:'', jabatan:'', bagian:'TID', role:'User', status:'Aktif' };
+const emptyForm: FormData = { nama:'', email:'', nrk:'', nomor_hp:'', jabatan:'', bagian:'TID', role:'User', status:'Aktif', employeeId:'' };
 
 export default function ManajemenUserPage() {
   const [users, setUsers]     = useState<UserData[]>(INITIAL_USERS);
@@ -90,8 +106,12 @@ export default function ManajemenUserPage() {
       && (filterStatus === 'Semua' || u.status === filterStatus);
   });
 
+  // Employee yang sudah di-assign ke user lain tidak bisa dipilih lagi
+  const assignedEmployeeIds = useMemo(() => new Set(users.filter(u => u.employeeId).map(u => u.employeeId!)), [users]);
+  const availableEmployees = useMemo(() => MOCK_EMPLOYEES.filter(e => !assignedEmployeeIds.has(e.id)), [assignedEmployeeIds]);
+
   const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setModalOpen(true); }, []);
-  const openEdit   = useCallback((u: UserData) => { setEditTarget(u); setForm({ nama:u.nama, email:u.email, nrk:u.nrk, nomor_hp:u.nomor_hp, jabatan:u.jabatan, bagian:u.bagian, role:u.role, status:u.status }); setModalOpen(true); }, []);
+  const openEdit   = useCallback((u: UserData) => { setEditTarget(u); setForm({ nama:u.nama, email:u.email, nrk:u.nrk, nomor_hp:u.nomor_hp, jabatan:u.jabatan, bagian:u.bagian, role:u.role, status:u.status, employeeId:u.employeeId ?? '' }); setModalOpen(true); }, []);
 
   const handleSave = useCallback(() => {
     if (!form.nama.trim() || !form.email.trim()) { showToast('err', 'Nama dan Email wajib diisi.'); return; }
@@ -356,6 +376,29 @@ export default function ManajemenUserPage() {
                       {STATUSES.map(s => <option key={s} value={s} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{s}</option>)}
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className={labelCls}>Link ke Employee</label>
+                  <div className="relative">
+                    <UserCog className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    <select
+                      value={form.employeeId ?? ''}
+                      onChange={e => setForm(f=>({...f, employeeId: e.target.value || undefined}))}
+                      className={`${inputCls} pl-10 cursor-pointer`}
+                    >
+                      <option value="" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">— Tidak dikaitkan —</option>
+                      {/* Tampilkan employee yang di-edit (jika ada) + available employees */}
+                      {editTarget?.employeeId && (() => {
+                        const emp = MOCK_EMPLOYEES.find(e => e.id === editTarget.employeeId);
+                        return emp ? <option key={emp.id} value={emp.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{emp.nama} — {emp.nrk}</option> : null;
+                      })()}
+                      {availableEmployees.filter(e => e.id !== editTarget?.employeeId).map(emp => (
+                        <option key={emp.id} value={emp.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{emp.nama} — {emp.nrk}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                  </div>
+                  <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Hubungkan akun user ke data employee yang tersedia.</p>
                 </div>
               </div>
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
