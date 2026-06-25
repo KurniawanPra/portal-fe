@@ -20,7 +20,7 @@ function usePerf() {
 /* -------------------------------------------------------------------------- */
 /*  Logo Centerpiece                                                           */
 /* -------------------------------------------------------------------------- */
-function LogoCenterpiece({ isLow }: { isLow: boolean }) {
+function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolean; isHoveredActive: boolean; setHovered: (h: boolean) => void }) {
   const logoTexture = useTexture('/img/inl3d.png');
   const logoGroupRef = useRef<THREE.Group>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
@@ -32,8 +32,9 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
   const ring2MatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const ring3MatRef = useRef<THREE.MeshStandardMaterial | null>(null);
 
-  const [hovered, setHovered] = useState(false);
   const hoverFactor = useRef(0);
+  const sweepProgress = useRef(0);
+  const sweepLightRef = useRef<THREE.PointLight>(null!);
 
   // Keep track of accumulated rotations to prevent jarring jumps on hover transitions
   const ringRotations = useRef({
@@ -44,40 +45,44 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
     ring3Y: 0,
     ring3Z: 0,
   });
-  const logoRotationY = useRef(0);
-  const logoRotationX = useRef(0);
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
     const dt = Math.min(delta, 0.1); // clamp delta to prevent massive jumps on lag spikes
 
     // Smooth frame-rate independent hover transition
-    const lerpSpeed = hovered ? 6.0 : 4.0;
-    hoverFactor.current = THREE.MathUtils.lerp(hoverFactor.current, hovered ? 1 : 0, 1 - Math.exp(-lerpSpeed * dt));
+    const lerpSpeed = isHoveredActive ? 6.0 : 4.0;
+    hoverFactor.current = THREE.MathUtils.lerp(hoverFactor.current, isHoveredActive ? 1 : 0, 1 - Math.exp(-lerpSpeed * dt));
 
-    // Rotate centerpiece logo (floats, and tilts/spins on hover)
-    const floatY = Math.sin(t * 0.5) * 0.15;
-    const floatX = Math.sin(t * 0.35) * 0.08;
-    const floatZ = Math.sin(t * 0.25) * 0.03;
+    // Animate sweep progress for metallic sheen wipe glow effect on hover (slower, elegant sweep)
+    if (isHoveredActive) {
+      sweepProgress.current = Math.min(sweepProgress.current + dt * 1.1, 1.0);
+    } else {
+      sweepProgress.current = Math.max(sweepProgress.current - dt * 0.8, 0.0);
+    }
 
-    // Smoothly accumulate rotation to prevent sudden angle jumps when speed changes
-    const logoSpinSpeedY = 0.05 * hoverFactor.current;
-    const logoSpinSpeedX = Math.sin(t * 1.2) * 0.03 * hoverFactor.current;
+    // Move the point light across the logo from left to right on hover progress
+    if (sweepLightRef.current) {
+      sweepLightRef.current.position.x = -3.5 + sweepProgress.current * 7.0;
+      sweepLightRef.current.intensity = Math.sin(sweepProgress.current * Math.PI) * (isLow ? 6.0 : 18.0);
+    }
 
-    logoRotationY.current += dt * logoSpinSpeedY;
-    logoRotationX.current += dt * logoSpinSpeedX;
+    // Opsi 2: Sway gently (slow periodic motion) - no Y/X spin to prevent looking flat/gepeng
+    const swayY = Math.sin(t * 0.5) * 0.15;
+    const swayX = Math.cos(t * 0.35) * 0.08;
+    const swayZ = Math.sin(t * 0.25) * 0.03;
 
-    logoGroupRef.current.rotation.y = floatY + logoRotationY.current;
-    logoGroupRef.current.rotation.x = floatX + logoRotationX.current;
-    logoGroupRef.current.rotation.z = floatZ;
+    logoGroupRef.current.rotation.y = swayY;
+    logoGroupRef.current.rotation.x = swayX;
+    logoGroupRef.current.rotation.z = swayZ;
 
-    // Scale centerpiece logo on hover (increased from 0.12 to 0.35 for a much larger effect)
-    const scaleVal = 1 + hoverFactor.current * 0.35;
+    // Subtle scale response on hover (keeps it responsive but clean)
+    const scaleVal = 1 + hoverFactor.current * 0.08;
     logoGroupRef.current.scale.set(scaleVal, scaleVal, scaleVal);
 
-    // Gyroscopic counter-rotating rings (speeds up and scales on hover)
-    const ringSpeed = 1 + hoverFactor.current * 1.5;
-    const ringScaleVal = 1 + hoverFactor.current * 0.20; // Scale rings to expand outwards as the logo grows
+    // Gyroscopic counter-rotating rings (speed up dynamically on hover!)
+    const ringSpeed = 1.0 + hoverFactor.current * 2.5;
+    const ringScaleVal = 1.0 + hoverFactor.current * 0.15;
 
     ringRotations.current.ring1X += -dt * 0.22 * ringSpeed;
     ringRotations.current.ring1Y += -dt * 0.16 * ringSpeed;
@@ -100,41 +105,41 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
       ring3Ref.current.scale.set(ringScaleVal, ringScaleVal, ringScaleVal);
     }
 
-    // Intensify emissive glow on hover
+    // Rings glow up dynamically on hover
     if (ringMatRef.current) {
-      ringMatRef.current.emissiveIntensity = 0.35 + hoverFactor.current * 0.55;
+      ringMatRef.current.emissiveIntensity = 0.35 + hoverFactor.current * 0.65;
     }
     if (ring2MatRef.current) {
-      ring2MatRef.current.emissiveIntensity = 0.4 + hoverFactor.current * 0.6;
+      ring2MatRef.current.emissiveIntensity = 0.4 + hoverFactor.current * 0.8;
     }
     if (ring3MatRef.current) {
-      ring3MatRef.current.emissiveIntensity = 1.2 + hoverFactor.current * 0.8;
+      ring3MatRef.current.emissiveIntensity = 1.2 + hoverFactor.current * 1.0;
     }
+
+    // Keep logo material properties at premium defaults (no hover color-washout, but increase reflections)
     if (logoMatRef.current) {
-      // Prevent washout by keeping emissive low and using a dark base color (#222222)
-      logoMatRef.current.emissiveIntensity = hoverFactor.current * 0.25;
-
-      // Animate material properties on hover for premium, dynamic reflections
-      const baseRoughness = isLow ? 0.2 : 0.15;
-      const targetRoughness = isLow ? 0.18 : 0.05;
-      logoMatRef.current.roughness = THREE.MathUtils.lerp(baseRoughness, targetRoughness, hoverFactor.current);
-
-      const baseEnv = isLow ? 0.8 : 1.2;
-      const targetEnv = isLow ? 1.0 : 2.2;
-      logoMatRef.current.envMapIntensity = THREE.MathUtils.lerp(baseEnv, targetEnv, hoverFactor.current);
-
-      const baseMetal = isLow ? 0.05 : 0.1;
-      const targetMetal = isLow ? 0.08 : 0.25;
-      logoMatRef.current.metalness = THREE.MathUtils.lerp(baseMetal, targetMetal, hoverFactor.current);
-
+      logoMatRef.current.emissiveIntensity = 0;
+      logoMatRef.current.roughness = isLow ? 0.3 : (0.25 - hoverFactor.current * 0.05); // shinier on hover
+      logoMatRef.current.metalness = 0.0; // metalness = 0.0 keeps colors bright and clean, avoids darkening
+      logoMatRef.current.envMapIntensity = isLow ? 0.8 : (1.5 + hoverFactor.current * 0.5); // high reflections
       if ('clearcoat' in logoMatRef.current) {
-        (logoMatRef.current as THREE.MeshPhysicalMaterial).clearcoat = THREE.MathUtils.lerp(0.6, 0.95, hoverFactor.current);
+        (logoMatRef.current as THREE.MeshPhysicalMaterial).clearcoat = 0.8 + hoverFactor.current * 0.2;
       }
     }
   });
 
   return (
     <group>
+      {/* Wipe/Sweep light for the metallic sheen effect on hover */}
+      <pointLight
+        ref={sweepLightRef}
+        color="#fffbeb"
+        distance={5}
+        decay={2.2}
+        intensity={0}
+        position={[-3, 0, 0.6]}
+      />
+
       {/* Centered INL Logo */}
       <group ref={logoGroupRef}>
         <mesh
@@ -161,7 +166,7 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
               metalness={0.05}
               envMapIntensity={0.8}
               side={THREE.DoubleSide}
-              emissive="#222222"
+              emissive="#000000"
               emissiveIntensity={0}
             />
           ) : (
@@ -169,13 +174,13 @@ function LogoCenterpiece({ isLow }: { isLow: boolean }) {
               ref={logoMatRef as React.Ref<THREE.MeshPhysicalMaterial>}
               map={logoTexture}
               transparent={true}
-              roughness={0.15}
-              metalness={0.1}
-              clearcoat={0.6}
+              roughness={0.25}
+              metalness={0.0} // metalness = 0.0 to prevent darkening the logo colors
+              clearcoat={0.9} // high clearcoat lacquer for a premium 3D wet/reflective look
               clearcoatRoughness={0.1}
-              envMapIntensity={1.2}
+              envMapIntensity={1.5}
               side={THREE.DoubleSide}
-              emissive="#222222"
+              emissive="#000000"
               emissiveIntensity={0}
             />
           )}
@@ -262,9 +267,12 @@ function EnergyOrbiter({ radius, speed, color, offset }: EnergyOrbiterProps) {
 /* -------------------------------------------------------------------------- */
 /*  Parallax Camera Controller                                                 */
 /* -------------------------------------------------------------------------- */
-function CameraController({ isLow }: { isLow: boolean }) {
+function CameraController({ isLow, isHoveredExternal }: { isLow: boolean; isHoveredExternal?: boolean }) {
   const groupRef = useRef<THREE.Group>(null!);
   const { pointer } = useThree();
+
+  const [hovered, setHovered] = useState(false);
+  const isHoveredActive = hovered || !!isHoveredExternal;
 
   useFrame((state, delta) => {
     const dt = Math.min(delta, 0.1);
@@ -280,7 +288,7 @@ function CameraController({ isLow }: { isLow: boolean }) {
   return (
     <group ref={groupRef}>
       <Float speed={isLow ? 0.8 : 1.3} rotationIntensity={0.1} floatIntensity={isLow ? 0.3 : 0.5}>
-        <LogoCenterpiece isLow={isLow} />
+        <LogoCenterpiece isLow={isLow} isHoveredActive={isHoveredActive} setHovered={setHovered} />
       </Float>
 
       {/* Energy orbiters — skipped on low-end */}
@@ -292,14 +300,14 @@ function CameraController({ isLow }: { isLow: boolean }) {
         </>
       )}
 
-      {/* Sparkles — halved on low-end */}
+      {/* Sparkles — static and clean ambient particle effect */}
       <Sparkles
         count={isLow ? 20 : 45}
         scale={[6, 4, 6]}
         size={isLow ? 1.8 : 2.5}
         speed={isLow ? 0.2 : 0.35}
-        color="#f59e0b"
-        opacity={isLow ? 0.45 : 0.65}
+        color="#fbbf24"
+        opacity={isLow ? 0.45 : 0.6}
       />
     </group>
   );
@@ -308,7 +316,7 @@ function CameraController({ isLow }: { isLow: boolean }) {
 /* -------------------------------------------------------------------------- */
 /*  Main Scene                                                                 */
 /* -------------------------------------------------------------------------- */
-export default function Inl3DScene() {
+export default function Inl3DScene({ isHoveredExternal }: { isHoveredExternal?: boolean }) {
   const { isLow } = usePerf();
 
   return (
@@ -325,12 +333,19 @@ export default function Inl3DScene() {
       frameloop={isLow ? 'demand' : 'always'}            // Demand mode reduces idle CPU usage
       performance={{ min: 0.5 }}                         // Auto-degrade DPR if FPS drops
     >
-      <ambientLight intensity={isLow ? 1.0 : 0.75} color="#ffffff" />
+      <ambientLight intensity={isLow ? 1.1 : 1.2} color="#ffffff" />
+
+      {/* Front directional light to make the logo colors bright and clear */}
+      <directionalLight
+        position={[0, 0, 6]}
+        intensity={1.6}
+        color="#ffffff"
+      />
 
       {/* Directional light — no shadow map on low-end */}
       <directionalLight
         position={[5, 8, 4]}
-        intensity={isLow ? 1.2 : 1.8}
+        intensity={isLow ? 1.4 : 2.2}
         color="#ffffff"
         castShadow={!isLow}
         shadow-mapSize={isLow ? undefined : [1024, 1024]}
@@ -342,7 +357,7 @@ export default function Inl3DScene() {
       <pointLight position={[6,   4, 3]} intensity={isLow ? 2.0 : 4.5} color="#f59e0b" distance={15} decay={2} />
 
       <Suspense fallback={null}>
-        <CameraController isLow={isLow} />
+        <CameraController isLow={isLow} isHoveredExternal={isHoveredExternal} />
       </Suspense>
 
       {/* Environment preset skipped entirely on low-end */}

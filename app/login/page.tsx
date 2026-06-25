@@ -31,6 +31,7 @@ export default function LoginPage() {
   const isLowEnd = useIsLowEnd();
 
   const [isPlaying, setIsPlaying] = useState(false);
+  const [is3dHovered, setIs3dHovered] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const togglePlay = () => {
@@ -121,12 +122,28 @@ export default function LoginPage() {
         <div className="absolute top-0 bottom-0 left-[45%] w-[1.5px] bg-gradient-to-b from-brand/20 via-brand to-brand/20 z-30 hidden lg:block shadow-[0_0_20px_rgba(var(--brand-rgb),0.6)] transform -skew-x-6 origin-top pointer-events-none" />
 
         {/* Right Side: Animated 3D INL Logo */}
-        <div className="relative hidden lg:flex lg:flex-1 h-full items-center justify-center z-10 bg-slate-100/10 dark:bg-slate-950/20">
+        <div 
+          onMouseEnter={() => setIs3dHovered(true)}
+          onMouseLeave={() => setIs3dHovered(false)}
+          className="relative hidden lg:flex lg:flex-1 h-full items-center justify-center z-10 bg-slate-100/10 dark:bg-slate-950/20"
+        >
           {/* Ambient glow highlights — skip costly blur-3xl on low-end */}
           {!isLowEnd && (
             <>
-              <div className="absolute left-1/4 top-1/3 h-96 w-96 rounded-full blur-3xl opacity-20 dark:opacity-20 pointer-events-none" style={{ background: 'rgba(var(--brand-rgb), 0.5)' }} />
-              <div className="absolute right-1/4 bottom-1/3 h-80 w-80 rounded-full blur-3xl opacity-15 dark:opacity-15 pointer-events-none" style={{ background: 'rgba(59, 130, 246, 0.4)' }} />
+              <div 
+                className={cn(
+                  "absolute left-1/4 top-1/3 h-96 w-96 rounded-full blur-3xl pointer-events-none transition-all duration-700 ease-out transform-gpu",
+                  is3dHovered ? "opacity-35 dark:opacity-45 scale-125" : "opacity-20 dark:opacity-20 scale-100"
+                )} 
+                style={{ background: is3dHovered ? 'rgba(var(--brand-dark-rgb), 0.75)' : 'rgba(var(--brand-rgb), 0.5)' }} 
+              />
+              <div 
+                className={cn(
+                  "absolute right-1/4 bottom-1/3 h-80 w-80 rounded-full blur-3xl pointer-events-none transition-all duration-700 ease-out transform-gpu",
+                  is3dHovered ? "opacity-25 dark:opacity-35 scale-115" : "opacity-15 dark:opacity-15 scale-100"
+                )} 
+                style={{ background: is3dHovered ? 'rgba(59, 130, 246, 0.65)' : 'rgba(59, 130, 246, 0.4)' }} 
+              />
             </>
           )}
 
@@ -146,7 +163,7 @@ export default function LoginPage() {
 
           {/* 3D Scene */}
           <div className="absolute inset-y-0 -left-[20%] -right-[20%] z-10">
-            <Inl3DScene />
+            <Inl3DScene isHoveredExternal={is3dHovered} />
           </div>
 
           {/* Floating Audio Controller */}
