@@ -2,7 +2,7 @@
 
 import React, { useRef, Suspense, useMemo, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Float, Trail, useTexture, Sparkles } from '@react-three/drei';
+import { Float, Trail, Sparkles, useGLTF, Center } from '@react-three/drei';
 import * as THREE from 'three';
 
 /* -------------------------------------------------------------------------- */
@@ -21,13 +21,12 @@ function usePerf() {
 /*  Logo Centerpiece                                                           */
 /* -------------------------------------------------------------------------- */
 function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolean; isHoveredActive: boolean; setHovered: (h: boolean) => void }) {
-  const logoTexture = useTexture('/img/inl3d.png');
+  const { scene } = useGLTF('/3d_model/85217c5c7e3fec599985e179a3c87bf2.glb');
   const logoGroupRef = useRef<THREE.Group>(null!);
   const ringRef = useRef<THREE.Mesh>(null!);
   const ring2Ref = useRef<THREE.Mesh>(null!);
   const ring3Ref = useRef<THREE.Mesh>(null!);
 
-  const logoMatRef = useRef<THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial | null>(null);
   const ringMatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const ring2MatRef = useRef<THREE.MeshStandardMaterial | null>(null);
   const ring3MatRef = useRef<THREE.MeshStandardMaterial | null>(null);
@@ -45,6 +44,31 @@ function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolea
     ring3Y: 0,
     ring3Z: 0,
   });
+
+  // Extract and optimize materials once the scene is loaded (run only once to prevent lagging)
+  useMemo(() => {
+    scene.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mesh = child as THREE.Mesh;
+        mesh.castShadow = false; // Disable shadows for the heavy 71MB model
+        mesh.receiveShadow = false;
+        if (mesh.material) {
+          const oldMat = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as any;
+          mesh.material = new THREE.MeshStandardMaterial({
+            map: oldMat.map,
+            color: oldMat.color,
+            roughness: 0.45,
+            metalness: 0.0, // Prevent logo from turning dark
+            transparent: oldMat.transparent,
+            opacity: oldMat.opacity,
+            side: THREE.DoubleSide,
+            emissive: new THREE.Color("#000000"),
+            emissiveIntensity: 0
+          });
+        }
+      }
+    });
+  }, [scene]);
 
   useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
@@ -64,13 +88,13 @@ function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolea
     // Move the point light across the logo from left to right on hover progress
     if (sweepLightRef.current) {
       sweepLightRef.current.position.x = -3.5 + sweepProgress.current * 7.0;
-      sweepLightRef.current.intensity = Math.sin(sweepProgress.current * Math.PI) * (isLow ? 6.0 : 18.0);
+      sweepLightRef.current.intensity = Math.sin(sweepProgress.current * Math.PI) * (isLow ? 5.0 : 15.0);
     }
 
-    // Opsi 2: Sway gently (slow periodic motion) - no Y/X spin to prevent looking flat/gepeng
-    const swayY = Math.sin(t * 0.5) * 0.15;
-    const swayX = Math.cos(t * 0.35) * 0.08;
-    const swayZ = Math.sin(t * 0.25) * 0.03;
+    // Opsi 2: Sway gently (slow periodic motion) - no Y/X spin to prevent looking flat/gepeng and keep it facing INL
+    const swayY = Math.sin(t * 0.5) * 0.15; // gentle horizontal sway
+    const swayX = Math.cos(t * 0.35) * 0.08; // gentle vertical sway
+    const swayZ = Math.sin(t * 0.25) * 0.03; // gentle roll
 
     logoGroupRef.current.rotation.y = swayY;
     logoGroupRef.current.rotation.x = swayX;
@@ -81,8 +105,8 @@ function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolea
     logoGroupRef.current.scale.set(scaleVal, scaleVal, scaleVal);
 
     // Gyroscopic counter-rotating rings (speed up dynamically on hover!)
-    const ringSpeed = 1.0 + hoverFactor.current * 2.5;
-    const ringScaleVal = 1.0 + hoverFactor.current * 0.15;
+    const ringSpeed = 1.0 + hoverFactor.current * 2.0;
+    const ringScaleVal = 1.0 + hoverFactor.current * 0.12;
 
     ringRotations.current.ring1X += -dt * 0.22 * ringSpeed;
     ringRotations.current.ring1Y += -dt * 0.16 * ringSpeed;
@@ -105,26 +129,15 @@ function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolea
       ring3Ref.current.scale.set(ringScaleVal, ringScaleVal, ringScaleVal);
     }
 
-    // Rings glow up dynamically on hover
+    // Keep ring intensities constant to prevent frame stutter on hover
     if (ringMatRef.current) {
-      ringMatRef.current.emissiveIntensity = 0.35 + hoverFactor.current * 0.65;
+      ringMatRef.current.emissiveIntensity = 0.5;
     }
     if (ring2MatRef.current) {
-      ring2MatRef.current.emissiveIntensity = 0.4 + hoverFactor.current * 0.8;
+      ring2MatRef.current.emissiveIntensity = 0.6;
     }
     if (ring3MatRef.current) {
-      ring3MatRef.current.emissiveIntensity = 1.2 + hoverFactor.current * 1.0;
-    }
-
-    // Keep logo material properties at premium defaults (no hover color-washout, but increase reflections)
-    if (logoMatRef.current) {
-      logoMatRef.current.emissiveIntensity = 0;
-      logoMatRef.current.roughness = isLow ? 0.3 : (0.25 - hoverFactor.current * 0.05); // shinier on hover
-      logoMatRef.current.metalness = 0.0; // metalness = 0.0 keeps colors bright and clean, avoids darkening
-      logoMatRef.current.envMapIntensity = isLow ? 0.8 : (1.5 + hoverFactor.current * 0.5); // high reflections
-      if ('clearcoat' in logoMatRef.current) {
-        (logoMatRef.current as THREE.MeshPhysicalMaterial).clearcoat = 0.8 + hoverFactor.current * 0.2;
-      }
+      ring3MatRef.current.emissiveIntensity = 1.2;
     }
   });
 
@@ -141,50 +154,22 @@ function LogoCenterpiece({ isLow, isHoveredActive, setHovered }: { isLow: boolea
       />
 
       {/* Centered INL Logo */}
-      <group ref={logoGroupRef}>
-        <mesh
-          position={[0, 0, 0]}
-          onPointerOver={(e) => {
-            e.stopPropagation();
-            setHovered(true);
-            document.body.style.cursor = 'pointer';
-          }}
-          onPointerOut={(e) => {
-            e.stopPropagation();
-            setHovered(false);
-            document.body.style.cursor = 'default';
-          }}
-        >
-          <planeGeometry args={[4.2, 4.2]} />
-          {isLow ? (
-            /* Low-end: plain standard material — no transmission/clearcoat shader */
-            <meshStandardMaterial
-              ref={logoMatRef}
-              map={logoTexture}
-              transparent={true}
-              roughness={0.2}
-              metalness={0.05}
-              envMapIntensity={0.8}
-              side={THREE.DoubleSide}
-              emissive="#000000"
-              emissiveIntensity={0}
-            />
-          ) : (
-            <meshPhysicalMaterial
-              ref={logoMatRef as React.Ref<THREE.MeshPhysicalMaterial>}
-              map={logoTexture}
-              transparent={true}
-              roughness={0.25}
-              metalness={0.0} // metalness = 0.0 to prevent darkening the logo colors
-              clearcoat={0.9} // high clearcoat lacquer for a premium 3D wet/reflective look
-              clearcoatRoughness={0.1}
-              envMapIntensity={1.5}
-              side={THREE.DoubleSide}
-              emissive="#000000"
-              emissiveIntensity={0}
-            />
-          )}
-        </mesh>
+      <group
+        ref={logoGroupRef}
+        onPointerOver={(e) => {
+          e.stopPropagation();
+          setHovered(true);
+          document.body.style.cursor = 'pointer';
+        }}
+        onPointerOut={(e) => {
+          e.stopPropagation();
+          setHovered(false);
+          document.body.style.cursor = 'default';
+        }}
+      >
+        <Center>
+          <primitive object={scene} scale={2.8} />
+        </Center>
       </group>
 
       {/* Torus Ring 1: Blue */}
@@ -321,35 +306,34 @@ export default function Inl3DScene({ isHoveredExternal }: { isHoveredExternal?: 
 
   return (
     <Canvas
-      shadows={!isLow}                                   // No shadows on low-end
+      shadows={false}                                    // Shadows completely disabled to optimize the 71MB model
       camera={{ position: [0, 0, 8.2], fov: 45 }}
-      dpr={isLow ? 1 : [1, 1.5]}                        // Fixed DPR 1 on low-end, max 1.5 on high
+      dpr={isLow ? 0.85 : 1.0}                           // Cap DPR at 1.0 to optimize render fillrate on Retina/High-DPI screens
       gl={{
-        antialias: !isLow,                               // No antialias on low-end
+        antialias: false,                                // Antialiasing disabled for significant GPU boost
         alpha: true,
         powerPreference: 'high-performance',
       }}
       style={{ width: '100%', height: '100%', background: 'transparent' }}
-      frameloop={isLow ? 'demand' : 'always'}            // Demand mode reduces idle CPU usage
-      performance={{ min: 0.5 }}                         // Auto-degrade DPR if FPS drops
+      frameloop={isLow ? 'demand' : 'always'}
+      performance={{ min: 0.5 }}
     >
-      <ambientLight intensity={isLow ? 1.1 : 1.2} color="#ffffff" />
+      <ambientLight intensity={isLow ? 1.1 : 1.3} color="#ffffff" />
 
       {/* Front directional light to make the logo colors bright and clear */}
       <directionalLight
         position={[0, 0, 6]}
-        intensity={1.6}
+        intensity={1.8}
         color="#ffffff"
+        castShadow={false}
       />
 
-      {/* Directional light — no shadow map on low-end */}
+      {/* Top-right directional light — shadows disabled */}
       <directionalLight
         position={[5, 8, 4]}
         intensity={isLow ? 1.4 : 2.2}
         color="#ffffff"
-        castShadow={!isLow}
-        shadow-mapSize={isLow ? undefined : [1024, 1024]}
-        shadow-bias={isLow ? undefined : -0.0001}
+        castShadow={false}
       />
 
       {/* Colored point lights — reduced intensity on low-end */}
@@ -359,14 +343,6 @@ export default function Inl3DScene({ isHoveredExternal }: { isHoveredExternal?: 
       <Suspense fallback={null}>
         <CameraController isLow={isLow} isHoveredExternal={isHoveredExternal} />
       </Suspense>
-
-      {/* Environment preset skipped entirely on low-end */}
-      {!isLow && (
-        <Suspense fallback={null}>
-          {/* Inline to avoid top-level conditional dynamic import */}
-          <EnvironmentLazy />
-        </Suspense>
-      )}
     </Canvas>
   );
 }
@@ -377,3 +353,6 @@ function EnvironmentLazy() {
   const { Environment } = require('@react-three/drei');
   return <Environment preset="city" />;
 }
+
+// Pre-load the GLB model to prevent render lag
+useGLTF.preload('/3d_model/85217c5c7e3fec599985e179a3c87bf2.glb');
