@@ -92,6 +92,7 @@ const GENDER_AVATAR: Record<JenisKelamin, string> = {
 };
 
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
+
 const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400';
 
 const getLabel = (t: string) => {
@@ -153,6 +154,7 @@ export default function ManajemenEmployeePage() {
   const [pendidikans,       setPendidikans]       = useState<any[]>([]);
   const [statusPernikahans, setStatusPernikahans] = useState<any[]>([]);
   const [photoFile,         setPhotoFile]         = useState<File | null>(null);
+  const [errors,            setErrors]            = useState<Record<string, string>>({});
 
   const getUnitPathStr = useCallback((unitId: string) => {
     let curr = unitOrganisasis.find(u => u.id === unitId);
@@ -250,6 +252,7 @@ export default function ManajemenEmployeePage() {
     setUnitSearch('');
     setUnitDropdownOpen(false);
     setPhotoFile(null);
+    setErrors({});
     setModalOpen(true);
   }, []);
 
@@ -289,22 +292,33 @@ export default function ManajemenEmployeePage() {
     setUnitSearch('');
     setUnitDropdownOpen(false);
     setPhotoFile(null);
+    setErrors({});
     setModalOpen(true);
   }, [unitOrganisasis]);
 
   // ─── Save (Create/Update) ──────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
-    if (!form.nama.trim())                      { showToast('err', 'Nama Lengkap wajib diisi.'); return; }
-    if (!form.nrk.trim())                       { showToast('err', 'NRK wajib diisi.'); return; }
-    if (!form.nik.trim())                       { showToast('err', 'NIK wajib diisi.'); return; }
-    if (form.nik.length !== 16)                 { showToast('err', 'NIK harus 16 digit.'); return; }
-    if (!form.jabatan.trim())                   { showToast('err', 'Jabatan wajib diisi.'); return; }
-    if (form.unitPath.length === 0)             { showToast('err', 'Unit Organisasi wajib diisi.'); return; }
-    if (!form.tempatLahir.trim())               { showToast('err', 'Tempat Lahir wajib diisi.'); return; }
-    if (!form.tanggalLahir)                     { showToast('err', 'Tanggal Lahir wajib diisi.'); return; }
-    if (!form.tanggalMasuk)                     { showToast('err', 'Tanggal Masuk wajib diisi.'); return; }
-    if (!form.nomorHp.trim())                   { showToast('err', 'Nomor HP wajib diisi.'); return; }
-    if (!form.alamat.trim())                    { showToast('err', 'Alamat wajib diisi.'); return; }
+    const newErrors: Record<string, string> = {};
+    if (!form.nama.trim())                      newErrors.nama = 'Nama Lengkap wajib diisi.';
+    if (!form.nrk.trim())                       newErrors.nrk = 'NRK wajib diisi.';
+    else if (form.nrk.trim().length < 7)        newErrors.nrk = 'NRK minimal harus 7 karakter.';
+    if (!form.nik.trim())                       newErrors.nik = 'NIK wajib diisi.';
+    else if (form.nik.length !== 16)            newErrors.nik = 'NIK harus 16 digit.';
+    if (!form.jabatan.trim())                   newErrors.jabatan = 'Jabatan wajib diisi.';
+    if (form.unitPath.length === 0)             newErrors.unitPath = 'Unit Organisasi wajib diisi.';
+    if (!form.tempatLahir.trim())               newErrors.tempatLahir = 'Tempat Lahir wajib diisi.';
+    if (!form.tanggalLahir)                     newErrors.tanggalLahir = 'Tanggal Lahir wajib diisi.';
+    if (!form.tanggalMasuk)                     newErrors.tanggalMasuk = 'Tanggal Masuk wajib diisi.';
+    if (!form.nomorHp.trim())                   newErrors.nomorHp = 'Nomor HP wajib diisi.';
+    if (!form.alamat.trim())                    newErrors.alamat = 'Alamat wajib diisi.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      const firstError = Object.values(newErrors)[0];
+      showToast('err', firstError);
+      return;
+    }
+    setErrors({});
 
     setSaving(true);
     try {
@@ -513,7 +527,7 @@ export default function ManajemenEmployeePage() {
                     <div className="flex items-center gap-3">
                       {e.fotoProfil ? (
                         <img 
-                          src={e.fotoProfil.startsWith('http') ? e.fotoProfil : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/uploads/${e.fotoProfil}`} 
+                          src={e.fotoProfil.startsWith('http') ? e.fotoProfil : `/uploads/${e.fotoProfil}`} 
                           alt={e.nama} 
                           className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]" 
                         />
@@ -859,6 +873,63 @@ export default function ManajemenEmployeePage() {
                 </div>
 
                 {/* Foto Profil Upload */}
+                {/* <div className="space-y-2">
+                  <label className={labelCls}>Foto Profil</label>
+                  <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
+                    <div className="shrink-0">
+                      {photoFile ? (
+                        <img
+                          src={URL.createObjectURL(photoFile)}
+                          alt="Preview"
+                          className="h-14 w-14 rounded-xl object-cover border-2 border-amber-500"
+                        />
+                      ) : editTarget && editTarget.fotoProfil ? (
+                        <img
+                          src={editTarget.fotoProfil.startsWith('http') ? editTarget.fotoProfil : `/uploads/${editTarget.fotoProfil}`}
+                          alt="Current"
+                          className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-white/[0.08]"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xl">
+                          ?
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setPhotoFile(file);
+                        }}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500/10 file:text-amber-600 dark:file:text-amber-400 hover:file:bg-amber-500/20 cursor-pointer"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Format: JPG, PNG, GIF. Max 2MB.</p>
+                    </div>
+                  </div>
+                </div> */}
+
+                {/* Nomor HP */}
+                <div>
+                  <label className={labelCls}>Nomor HP</label>
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    <input type="tel" value={form.nomorHp} onChange={e => setForm(f=>({...f, nomorHp:e.target.value}))} placeholder="08xx-xxxx-xxxx" className={`${inputCls} pl-10`} />
+                  </div>
+                </div>
+
+                {/* Alamat */}
+                <div>
+                  <label className={labelCls}>Alamat</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    <textarea value={form.alamat} onChange={e => setForm(f=>({...f, alamat:e.target.value}))} placeholder="Alamat lengkap..." rows={4}
+                      className={`${inputCls} pl-10 resize-none`} />
+                  </div>
+                </div>
+
+                 {/* Foto Profil Upload */}
                 <div className="space-y-2">
                   <label className={labelCls}>Foto Profil</label>
                   <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
@@ -893,24 +964,6 @@ export default function ManajemenEmployeePage() {
                       />
                       <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Format: JPG, PNG, GIF. Max 2MB.</p>
                     </div>
-                  </div>
-                </div>
-
-                {/* Nomor HP */}
-                <div>
-                  <label className={labelCls}>Nomor HP</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="tel" value={form.nomorHp} onChange={e => setForm(f=>({...f, nomorHp:e.target.value}))} placeholder="08xx-xxxx-xxxx" className={`${inputCls} pl-10`} />
-                  </div>
-                </div>
-                {/* Alamat */}
-                <div>
-                  <label className={labelCls}>Alamat</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <textarea value={form.alamat} onChange={e => setForm(f=>({...f, alamat:e.target.value}))} placeholder="Alamat lengkap..." rows={2}
-                      className={`${inputCls} pl-10 resize-none`} />
                   </div>
                 </div>
               </div>

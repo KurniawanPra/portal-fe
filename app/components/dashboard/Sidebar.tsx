@@ -111,7 +111,7 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           <div className="flex items-center gap-2.5 overflow-hidden">
             {employee.foto_profil ? (
               <img
-                src={employee.foto_profil}
+                src={employee.foto_profil.startsWith('http') ? employee.foto_profil : `/uploads/${employee.foto_profil}`}
                 alt={employee.nama}
                 className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm border border-slate-200 dark:border-white/[0.08]"
               />

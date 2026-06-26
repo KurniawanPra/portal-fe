@@ -113,6 +113,22 @@ function AppIcon({ name }: { name: string }) {
         </div>
       );
     default:
+      const isImg = name && (name.startsWith('http') || name.includes('.') || name.includes('/') || name.includes('\\'));
+      if (isImg) {
+        const srcUrl = name.startsWith('http') ? name : `/uploads/${name}`;
+        return (
+          <div className={containerClass}>
+            <img
+              src={srcUrl}
+              alt="Icon"
+              className="h-12 w-12 rounded-xl object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          </div>
+        );
+      }
       const IconComponent = iconMap[name] || HelpCircle;
       return (
         <div className={`${containerClass} text-slate-500 dark:text-slate-400`}>

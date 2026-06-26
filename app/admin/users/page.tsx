@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Mail, Building2, UserX, UserCheck, ShieldCheck,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
-import { api } from '@/lib/api';
+import { api, ApiRequestError } from '@/lib/api';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Backend roles: 'user' | 'super_admin'
@@ -31,6 +31,7 @@ interface EmployeeBrief {
   nama: string;
   nrk: string;
   jabatan: string;
+  fotoProfil: string | null;
 }
 
 interface UserData {
@@ -46,6 +47,7 @@ interface UserData {
   nrk: string;
   jabatan: string;
   unitOrganisasi: string;
+  fotoProfil?: string;
 }
 
 // ─── Role Mapping ─────────────────────────────────────────────────────────────
@@ -98,11 +100,22 @@ export default function ManajemenUserPage() {
   const [search, setSearch]   = useState('');
   const [filterRole,   setFilterRole]   = useState<UserRole | 'Semua'>('Semua');
   const [filterStatus, setFilterStatus] = useState<UserStatus | 'Semua'>('Semua');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterRole, filterStatus]);
   const [loading, setLoading] = useState(true);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
 
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editTarget,   setEditTarget]   = useState<UserData | null>(null);
   const [form,         setForm]         = useState<FormData>(emptyForm);
+  const [errors,       setErrors]       = useState<Record<string, string>>({});
   const [saving,       setSaving]       = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
   const [deleting,     setDeleting]     = useState(false);
@@ -137,6 +150,7 @@ export default function ManajemenUserPage() {
           nrk: emp?.nrk || '-',
           jabatan: emp?.jabatan || '-',
           unitOrganisasi: '-',
+          fotoProfil: emp?.fotoProfil || undefined,
         };
       });
 
@@ -150,6 +164,20 @@ export default function ManajemenUserPage() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
+        setRoleDropdownOpen(false);
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   // ─── Filtering ────────────────────────────────────────────────────────────
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
@@ -158,22 +186,27 @@ export default function ManajemenUserPage() {
       && (filterStatus === 'Semua' || u.status === filterStatus);
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   // Employee yang sudah di-assign ke user lain tidak bisa dipilih lagi
   const assignedEmployeeIds = useMemo(() => new Set(users.filter(u => u.employeeId).map(u => u.employeeId!)), [users]);
   const availableEmployees = useMemo(() => allEmployees.filter(e => !assignedEmployeeIds.has(e.id)), [allEmployees, assignedEmployeeIds]);
 
-  const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setModalOpen(true); }, []);
+  const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setErrors({}); setModalOpen(true); }, []);
   const openEdit   = useCallback((u: UserData) => {
     setEditTarget(u);
+    setErrors({});
     setForm({ email: u.email, password: '', role: u.role, status: u.status, employeeId: u.employeeId ?? '' });
     setModalOpen(true);
   }, []);
 
   // ─── Save (Create/Update) ─────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
-    if (!form.email.trim())     { showToast('err', 'Email wajib diisi.'); return; }
-    if (!form.email.includes('@')) { showToast('err', 'Format email tidak valid.'); return; }
-    if (!editTarget && !form.password.trim()) { showToast('err', 'Password wajib diisi untuk user baru.'); return; }
+    setErrors({});
+    if (!form.email.trim())     { setErrors(e => ({ ...e, email: 'Email wajib diisi.' })); showToast('err', 'Email wajib diisi.'); return; }
+    if (!form.email.includes('@')) { setErrors(e => ({ ...e, email: 'Format email tidak valid.' })); showToast('err', 'Format email tidak valid.'); return; }
+    if (!editTarget && !form.password.trim()) { setErrors(e => ({ ...e, password: 'Password wajib diisi.' })); showToast('err', 'Password wajib diisi untuk user baru.'); return; }
 
     setSaving(true);
     try {
@@ -205,7 +238,18 @@ export default function ManajemenUserPage() {
       setLoading(true);
       await fetchUsers();
     } catch (err) {
-      showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+      if (err instanceof ApiRequestError && err.details) {
+        const fieldErrors: Record<string, string> = {};
+        err.details.forEach(d => {
+          let fieldName = d.field;
+          if (fieldName === 'isActive') fieldName = 'status';
+          fieldErrors[fieldName] = d.message;
+        });
+        setErrors(fieldErrors);
+        showToast('err', err.message || 'Gagal menyimpan.');
+      } else {
+        showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+      }
     } finally {
       setSaving(false);
     }
@@ -311,23 +355,95 @@ export default function ManajemenUserPage() {
             <input type="text" placeholder="Cari nama, email, atau NRK..." value={search} onChange={e => setSearch(e.target.value)}
               className={`${inputCls} pl-10`} />
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              {(['Semua', ...ROLES] as const).map(r => (
-                <button key={r} onClick={() => setFilterRole(r)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all cursor-pointer focus:outline-none ${filterRole===r ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30' : 'text-slate-550 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'}`}>
-                  {r}
-                </button>
-              ))}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Role Dropdown */}
+            <div 
+              ref={roleDropdownRef}
+              className="relative"
+            >
+              <button
+                type="button"
+                onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                className="flex items-center justify-between gap-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.15] hover:bg-slate-100/50 dark:hover:bg-white/[0.02] focus:outline-none transition-all cursor-pointer min-w-[140px]"
+              >
+                <div className="flex items-center gap-2">
+                  {filterRole === 'Admin' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                  {filterRole === 'User' && <span className="h-1.5 w-1.5 rounded-full bg-indigo-505" />}
+                  {filterRole === 'Semua' && <span className="h-1.5 w-1.5 rounded-full bg-slate-450" />}
+                  <span>{filterRole === 'Semua' ? 'Semua Role' : filterRole}</span>
+                </div>
+                <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${roleDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {roleDropdownOpen && (
+                <div className="absolute left-0 mt-1.5 z-50 min-w-[150px] rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d121c] p-1.5 shadow-[0_12px_30px_-6px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_-6px_rgba(0,0,0,0.5)] animate-scale-in">
+                  {(['Semua', ...ROLES] as const).map(r => (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => {
+                        setFilterRole(r);
+                        setRoleDropdownOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer text-left ${
+                        filterRole === r
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      {r === 'Admin' && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                      {r === 'User' && <span className="h-1.5 w-1.5 rounded-full bg-indigo-505" />}
+                      {r === 'Semua' && <span className="h-1.5 w-1.5 rounded-full bg-slate-450" />}
+                      <span>{r === 'Semua' ? 'Semua Role' : r}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.08]" />
-            <div className="flex items-center gap-1">
-              {(['Semua', ...STATUSES] as const).map(s => (
-                <button key={s} onClick={() => setFilterStatus(s as UserStatus | 'Semua')}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all cursor-pointer focus:outline-none ${filterStatus===s ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30' : 'text-slate-550 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'}`}>
-                  {s}
-                </button>
-              ))}
+
+            {/* Status Dropdown */}
+            <div 
+              ref={statusDropdownRef}
+              className="relative"
+            >
+              <button
+                type="button"
+                onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
+                className="flex items-center justify-between gap-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-slate-300 dark:hover:border-white/[0.15] hover:bg-slate-100/50 dark:hover:bg-white/[0.02] focus:outline-none transition-all cursor-pointer min-w-[140px]"
+              >
+                <div className="flex items-center gap-2">
+                  {filterStatus === 'Aktif' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                  {filterStatus === 'Suspended' && <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />}
+                  {filterStatus === 'Semua' && <span className="h-1.5 w-1.5 rounded-full bg-slate-450" />}
+                  <span>{filterStatus === 'Semua' ? 'Semua Status' : filterStatus}</span>
+                </div>
+                <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform duration-200 ${statusDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {statusDropdownOpen && (
+                <div className="absolute left-0 mt-1.5 z-50 min-w-[150px] rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d121c] p-1.5 shadow-[0_12px_30px_-6px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_-6px_rgba(0,0,0,0.5)] animate-scale-in">
+                  {(['Semua', ...STATUSES] as const).map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => {
+                        setFilterStatus(s as UserStatus | 'Semua');
+                        setStatusDropdownOpen(false);
+                      }}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-bold transition-all cursor-pointer text-left ${
+                        filterStatus === s
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      {s === 'Aktif' && <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />}
+                      {s === 'Suspended' && <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />}
+                      {s === 'Semua' && <span className="h-1.5 w-1.5 rounded-full bg-slate-450" />}
+                      <span>{s === 'Semua' ? 'Semua Status' : s}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -350,15 +466,23 @@ export default function ManajemenUserPage() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="px-5 py-12 text-center text-sm font-semibold text-slate-400 dark:text-slate-500">Tidak ada user yang sesuai.</td></tr>
-              ) : filtered.map(u => (
+                <tr><td colSpan={6} className="px-5 py-12 text-center text-sm font-semibold text-slate-455 dark:text-slate-500">Tidak ada user yang sesuai.</td></tr>
+              ) : paginatedData.map(u => (
                 <tr key={u.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
                   {/* User */}
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-sm text-white bg-gradient-to-br ${ROLE_AVATAR[u.role]}`}>
-                        {u.nama.charAt(0).toUpperCase()}
-                      </div>
+                      {u.fotoProfil ? (
+                        <img
+                          src={u.fotoProfil.startsWith('http') ? u.fotoProfil : `/uploads/${u.fotoProfil}`}
+                          alt={u.nama}
+                          className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]"
+                        />
+                      ) : (
+                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-black text-sm text-white bg-gradient-to-br ${ROLE_AVATAR[u.role]}`}>
+                          {u.nama.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-bold text-slate-800 dark:text-slate-100 truncate">{u.nama}</p>
                         <div className="flex items-center gap-1 mt-0.5">
@@ -424,8 +548,61 @@ export default function ManajemenUserPage() {
           </table>
           )}
         </div>
-        <div className="px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] text-[11px] font-bold text-slate-450 dark:text-slate-500">
-          {filtered.length} dari {users.length} user
+        {/* Pagination Footer */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01] text-[11px] font-bold text-slate-550 dark:text-slate-400">
+          <div>
+            {filtered.length === 0 ? (
+              <span>Menampilkan 0 entri</span>
+            ) : (
+              <span>
+                Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} - {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} entri
+                {filtered.length !== users.length && ` (disaring dari ${users.length} total)`}
+              </span>
+            )}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04] disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer focus:outline-none"
+              >
+                Sebelumnya
+              </button>
+              
+              {/* Page Numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, idx, arr) => {
+                  const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all cursor-pointer focus:outline-none ${
+                          currentPage === page
+                            ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
+                            : 'border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04] disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer focus:outline-none"
+              >
+                Selanjutnya
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -452,16 +629,18 @@ export default function ManajemenUserPage() {
                   <label className={labelCls}>Email SSO *</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="email" value={form.email} onChange={e => setForm(f=>({...f, email:e.target.value}))} placeholder="nama@inl.co.id" className={`${inputCls} pl-10`} />
+                    <input type="email" value={form.email} onChange={e => setForm(f=>({...f, email:e.target.value}))} placeholder="nama@inl.co.id" className={`${inputCls} pl-10 ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   </div>
+                  {errors.email && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.email}</span>}
                 </div>
                 <div>
                   <label className={labelCls}>{editTarget ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password *'}</label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="password" value={form.password} onChange={e => setForm(f=>({...f, password:e.target.value}))} placeholder={editTarget ? '••••••••' : 'Min 8 karakter, huruf kapital + angka'} className={`${inputCls} pl-10`} />
+                    <input type="password" value={form.password} onChange={e => setForm(f=>({...f, password:e.target.value}))} placeholder={editTarget ? '••••••••' : 'Min 8 karakter, huruf kapital + angka'} className={`${inputCls} pl-10 ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   </div>
-                  {!editTarget && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Min. 8 karakter, mengandung huruf kapital dan angka.</p>}
+                  {errors.password && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.password}</span>}
+                  {!editTarget && !errors.password && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Min. 8 karakter, mengandung huruf kapital dan angka.</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -506,7 +685,7 @@ export default function ManajemenUserPage() {
                     <select
                       value={form.employeeId ?? ''}
                       onChange={e => setForm(f=>({...f, employeeId: e.target.value || ''}))}
-                      className={`${inputCls} pl-10 pr-10 appearance-none cursor-pointer`}
+                      className={`${inputCls} pl-10 pr-10 appearance-none cursor-pointer ${errors.employeeId ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
                     >
                       <option value="" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">— Tidak dikaitkan —</option>
                       {/* Show currently linked employee if editing */}
@@ -520,7 +699,8 @@ export default function ManajemenUserPage() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Hubungkan akun user ke data employee yang tersedia.</p>
+                  {errors.employeeId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.employeeId}</span>}
+                  {!errors.employeeId && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Hubungkan akun user ke data employee yang tersedia.</p>}
                 </div>
               </div>
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">

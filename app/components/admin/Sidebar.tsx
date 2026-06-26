@@ -4,7 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, LayoutGrid, Users, LogOut, Database, UserCog, GitBranch } from 'lucide-react';
+import { Home, LayoutGrid, Users, LogOut, Database, UserCog, GitBranch, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sidebar as RadixSidebar,
@@ -23,6 +23,7 @@ interface AdminSidebarProps {
   admin: {
     nama: string;
     jabatan: string;
+    foto_profil?: string;
   };
   onLogout: () => void;
 }
@@ -37,6 +38,7 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
     { id: 'users',      label: 'Manajemen User',        path: '/admin/users',       icon: Users       },
     { id: 'employees',  label: 'Manajemen Employee',    path: '/admin/employees',   icon: UserCog     },
     { id: 'organisasi', label: 'Unit Organisasi',       path: '/admin/organisasi',  icon: GitBranch   },
+    { id: 'bagan',      label: 'Bagan Organisasi',      path: '/admin/bagan',       icon: Network     },
     { id: 'master',     label: 'Master Data',           path: '/admin/master',      icon: Database    },
   ];
 
@@ -112,9 +114,17 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
           state === 'collapsed' ? 'flex-col justify-center py-3 px-1' : 'justify-between px-3 py-2.5'
         )}>
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="flex h-8 w-8 shrink-0 place-items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-xs shadow-md">
-              {admin.nama.charAt(0)}
-            </div>
+            {admin.foto_profil ? (
+              <img
+                src={admin.foto_profil.startsWith('http') ? admin.foto_profil : `/uploads/${admin.foto_profil}`}
+                alt={admin.nama}
+                className="h-8 w-8 shrink-0 rounded-full object-cover shadow-md border border-slate-200 dark:border-white/[0.08]"
+              />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 place-items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-xs shadow-md">
+                {admin.nama.charAt(0)}
+              </div>
+            )}
             {state === 'expanded' && (
               <div className="grid flex-1 text-left text-sm leading-tight animate-fade-in overflow-hidden">
                 <span className="truncate font-bold text-slate-800 dark:text-slate-200">{admin.nama}</span>

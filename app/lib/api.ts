@@ -23,6 +23,15 @@ export interface ApiError {
 
 export type ApiResult<T> = ApiResponse<T> | ApiError;
 
+export class ApiRequestError extends Error {
+  details?: Array<{ field: string; message: string }>;
+  constructor(message: string, details?: Array<{ field: string; message: string }>) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.details = details;
+  }
+}
+
 // ─── Base URL ─────────────────────────────────────────────────────────────────
 // Uses Next.js rewrite proxy: /api/* → backend
 const BASE = '/api';
@@ -105,7 +114,7 @@ export async function apiFetch<T = unknown>(
           const json = await res.json();
           if (!json.success) {
             const apiErr = json as ApiError;
-            throw new Error(apiErr.error || 'Request gagal');
+            throw new ApiRequestError(apiErr.error || 'Request gagal', apiErr.details);
           }
           return json as ApiResponse<T>;
         }
@@ -128,7 +137,7 @@ export async function apiFetch<T = unknown>(
 
   if (!json.success) {
     const apiErr = json as ApiError;
-    throw new Error(apiErr.error || 'Request gagal');
+    throw new ApiRequestError(apiErr.error || 'Request gagal', apiErr.details);
   }
 
   return json as ApiResponse<T>;

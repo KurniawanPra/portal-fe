@@ -70,8 +70,8 @@ export default function DashboardLayout({
           let bagianFallback = 'Portal Admin';
 
           if (user.email === 'admin@inl.co.id') {
-            nameFallback = 'Budi Santoso, S.T.';
-            titleFallback = 'IT Lead Specialist';
+            nameFallback = 'Administrator';
+            titleFallback = 'Super Admin';
             bagianFallback = 'Teknologi Informasi & Digital';
           } else {
             const localPart = user.email.split('@')[0];

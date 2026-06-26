@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
-import { api } from '@/lib/api';
+import { api, ApiRequestError } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TipeUnit = 'direktorat' | 'sevp' | 'bagian' | 'sub_bagian' | 'seksi';
@@ -137,11 +137,18 @@ export default function UnitOrganisasiPage() {
   const [search, setSearch]                   = useState('');
   const [filterType, setFilterType]           = useState<'Semua' | TipeUnit>('Semua');
   const [filterStatus, setFilterStatus]       = useState<'Semua' | 'Aktif' | 'Non-Aktif'>('Semua');
+  const [currentPage, setCurrentPage]         = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterType, filterStatus]);
 
   const [modalOpen, setModalOpen]             = useState(false);
   const [editTarget, setEditTarget]           = useState<UnitOrganisasi | null>(null);
   const [deleteTarget, setDeleteTarget]       = useState<UnitOrganisasi | null>(null);
   const [form, setForm]                       = useState<FormData>(emptyForm);
+  const [errors, setErrors]                   = useState<Record<string, string>>({});
   const [toast, setToast]                     = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   const showToast = (type: 'ok' | 'err', text: string) => {
@@ -208,15 +215,22 @@ export default function UnitOrganisasiPage() {
     });
   }, [unitOrganisasis, search, filterType, filterStatus]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginatedData = useMemo(() => {
+    return filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filtered, currentPage]);
+
   // ─── Open Modals ───────────────────────────────────────────────────────────
   const openCreate = () => {
     setEditTarget(null);
     setForm(emptyForm);
+    setErrors({});
     setModalOpen(true);
   };
 
   const openEdit = (u: UnitOrganisasi) => {
     setEditTarget(u);
+    setErrors({});
     setForm({
       kode: u.kode,
       nama: u.nama,
@@ -229,12 +243,14 @@ export default function UnitOrganisasiPage() {
 
   // ─── Save Unit ─────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!form.kode.trim()) { showToast('err', 'Kode unit wajib diisi.'); return; }
-    if (!form.nama.trim()) { showToast('err', 'Nama unit wajib diisi.'); return; }
-    if (form.tipe !== 'direktorat' && !form.parentId) { showToast('err', 'Parent Unit wajib diisi.'); return; }
+    setErrors({});
+    if (!form.kode.trim()) { setErrors(e => ({ ...e, kode: 'Kode unit wajib diisi.' })); showToast('err', 'Kode unit wajib diisi.'); return; }
+    if (!form.nama.trim()) { setErrors(e => ({ ...e, nama: 'Nama unit wajib diisi.' })); showToast('err', 'Nama unit wajib diisi.'); return; }
+    if (form.tipe !== 'direktorat' && !form.parentId) { setErrors(e => ({ ...e, parentId: 'Parent Unit wajib diisi.' })); showToast('err', 'Parent Unit wajib diisi.'); return; }
     if (form.tipe !== 'direktorat' && form.parentId) {
       const parent = unitOrganisasis.find(u => u.id === form.parentId);
       if (parent && TYPE_RANK[parent.tipe] <= TYPE_RANK[form.tipe]) {
+        setErrors(e => ({ ...e, parentId: 'Tipe parent harus lebih tinggi dari tipe unit ini.' }));
         showToast('err', 'Tipe parent harus lebih tinggi dari tipe unit ini.');
         return;
       }
@@ -261,7 +277,16 @@ export default function UnitOrganisasiPage() {
       setLoading(true);
       await fetchData();
     } catch (err) {
-      showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+      if (err instanceof ApiRequestError && err.details) {
+        const fieldErrors: Record<string, string> = {};
+        err.details.forEach(d => {
+          fieldErrors[d.field] = d.message;
+        });
+        setErrors(fieldErrors);
+        showToast('err', err.message || 'Gagal menyimpan.');
+      } else {
+        showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+      }
     } finally {
       setSaving(false);
     }
@@ -405,7 +430,7 @@ export default function UnitOrganisasiPage() {
                   <td colSpan={6} className="px-5 py-12 text-center text-sm font-semibold text-slate-400 dark:text-slate-500">Tidak ada unit organisasi yang sesuai.</td>
                 </tr>
               ) : (
-                filtered.map(u => (
+                paginatedData.map(u => (
                   <tr key={u.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
                     {/* Kode */}
                     <td className="px-5 py-3.5">
@@ -444,8 +469,61 @@ export default function UnitOrganisasiPage() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] text-[11px] font-bold text-slate-450 dark:text-slate-500">
-          {filtered.length} dari {unitOrganisasis.length} unit organisasi
+        {/* Pagination Footer */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01] text-[11px] font-bold text-slate-550 dark:text-slate-400">
+          <div>
+            {filtered.length === 0 ? (
+              <span>Menampilkan 0 entri</span>
+            ) : (
+              <span>
+                Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} - {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} entri
+                {filtered.length !== unitOrganisasis.length && ` (disaring dari ${unitOrganisasis.length} total)`}
+              </span>
+            )}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04] disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer focus:outline-none"
+              >
+                Sebelumnya
+              </button>
+              
+              {/* Page Numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, idx, arr) => {
+                  const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all cursor-pointer focus:outline-none ${
+                          currentPage === page
+                            ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
+                            : 'border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04] disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer focus:outline-none"
+              >
+                Selanjutnya
+              </button>
+            </div>
+          )}
         </div>
       </TableCard>
 
@@ -477,8 +555,9 @@ export default function UnitOrganisasiPage() {
                       onChange={e => setForm(f => ({ ...f, kode: e.target.value.toUpperCase() }))}
                       placeholder="DIRUT"
                       maxLength={20}
-                      className={inputCls}
+                      className={`${inputCls} ${errors.kode ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
                     />
+                    {errors.kode && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.kode}</span>}
                   </div>
                   <div className="col-span-2">
                     <label className={labelCls}>Nama Unit *</label>
@@ -487,8 +566,9 @@ export default function UnitOrganisasiPage() {
                       value={form.nama}
                       onChange={e => setForm(f => ({ ...f, nama: e.target.value }))}
                       placeholder="Nama unit lengkap"
-                      className={inputCls}
+                      className={`${inputCls} ${errors.nama ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
                     />
+                    {errors.nama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nama}</span>}
                   </div>
                 </div>
 
@@ -520,7 +600,7 @@ export default function UnitOrganisasiPage() {
                       value={form.parentId}
                       disabled={form.tipe === 'direktorat'}
                       onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}
-                      className={`${inputCls} appearance-none pr-10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`}
+                      className={`${inputCls} appearance-none pr-10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${errors.parentId ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
                     >
                       <option value="">- Tanpa Parent (Root) -</option>
                       {parentOptions.map(p => (
@@ -529,6 +609,7 @@ export default function UnitOrganisasiPage() {
                     </select>
                     <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                   </div>
+                  {errors.parentId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.parentId}</span>}
                 </div>
 
                 {/* Status Toggle */}

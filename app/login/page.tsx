@@ -27,6 +27,17 @@ function useIsLowEnd(): boolean {
   }, []);
 }
 
+// const soundwaveStyle = `
+//   @keyframes soundwave-1 { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+//   @keyframes soundwave-2 { 0%, 100% { height: 6px; } 50% { height: 16px; } }
+//   @keyframes soundwave-3 { 0%, 100% { height: 12px; } 50% { height: 4px; } }
+//   @keyframes soundwave-4 { 0%, 100% { height: 5px; } 50% { height: 15px; } }
+//   .animate-soundwave-1 { animation: soundwave-1 0.8s ease-in-out infinite; }
+//   .animate-soundwave-2 { animation: soundwave-2 0.7s ease-in-out infinite 0.1s; }
+//   .animate-soundwave-3 { animation: soundwave-3 0.9s ease-in-out infinite 0.2s; }
+//   .animate-soundwave-4 { animation: soundwave-4 0.6s ease-in-out infinite 0.15s; }
+// `;
+
 export default function LoginPage() {
   const isLowEnd = useIsLowEnd();
 

@@ -129,16 +129,18 @@ export function ThemeTogglerButton({
           style={
             direction === 'horizontal'
               ? {
+                  left: '4px',
                   top: '4px',
                   bottom: '4px',
-                  width: `calc(${100 / modes.length}% - 8px)`,
-                  transform: `translateX(calc(${activeIndex * 100}% + ${activeIndex * 8}px))`,
+                  width: `calc((100% - 8px) / ${modes.length})`,
+                  transform: `translateX(${activeIndex * 100}%)`,
                 }
               : {
+                  top: '4px',
                   left: '4px',
                   right: '4px',
-                  height: `calc(${100 / modes.length}% - 8px)`,
-                  transform: `translateY(calc(${activeIndex * 100}% + ${activeIndex * 8}px))`,
+                  height: `calc((100% - 8px) / ${modes.length})`,
+                  transform: `translateY(${activeIndex * 100}%)`,
                 }
           }
         />

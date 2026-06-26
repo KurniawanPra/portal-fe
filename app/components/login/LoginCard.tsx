@@ -28,7 +28,7 @@ interface LoginResponse {
 
 export default function LoginCard() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [remember, setRemember] = useState(true);
@@ -38,16 +38,23 @@ export default function LoginCard() {
 
   const handleSubmit = async () => {
     if (loading) return;
-    if (!username || !password) {
-      setMessage({ type: 'error', text: 'Mohon isi Username/Email dan Password.' });
+    if (!email || !password) {
+      setMessage({ type: 'error', text: 'Mohon isi Email dan Password.' });
       return;
     }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setMessage({ type: 'error', text: 'Format email tidak valid.' });
+      return;
+    }
+
     setMessage(null);
     setLoading(true);
 
     try {
       const res = await api.post<LoginResponse>('/auth/login', {
-        email: username,
+        email,
         password,
       });
 
@@ -124,16 +131,16 @@ export default function LoginCard() {
         >
           <div>
             <label className="mb-1.5 sm:mb-2 block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Username atau Email
+              Alamat Email
             </label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               onFocus={() => setFocused('user')}
               onBlur={() => setFocused(null)}
               placeholder="nama@inl.co.id"
-              autoComplete="username"
+              autoComplete="email"
               className={`login-card-input w-full rounded-2xl border px-4 py-3 text-sm text-slate-800 dark:text-slate-200 outline-none transition-all duration-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 ${fieldStyle('user')}`}
             />
           </div>

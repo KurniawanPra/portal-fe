@@ -168,8 +168,8 @@ export default function ProfilePage() {
     let bagianFallback = 'Portal Admin';
 
     if (isBudi) {
-      nameFallback = 'Budi Santoso, S.T.';
-      titleFallback = 'IT Lead Specialist';
+      nameFallback = 'Administrator';
+      titleFallback = 'Super Admin';
       bagianFallback = 'Teknologi Informasi & Digital';
     } else {
       const localPart = userMe.email.split('@')[0];
@@ -300,7 +300,7 @@ export default function ProfilePage() {
           <div className="relative group">
             {profile.fotoProfil ? (
               <img
-                src={profile.fotoProfil}
+                src={profile.fotoProfil.startsWith('http') ? profile.fotoProfil : `/uploads/${profile.fotoProfil}`}
                 alt={profile.nama}
                 className="h-28 w-28 rounded-full object-cover shadow-md border-4 border-white dark:border-slate-800"
               />

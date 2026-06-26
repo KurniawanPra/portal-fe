@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { api } from '@/lib/api';
 import {
   LayoutGrid, Users, Shield, TrendingUp, AlertTriangle,
   CheckCircle2, Activity, Zap, Lock, ChevronLeft, ChevronRight,
@@ -280,16 +281,44 @@ const ACTIVITY_LOG = [
   { icon: TrendingUp,   color: 'text-cyan-500 dark:text-cyan-400',    bg: 'bg-cyan-500/10    border-cyan-500/20',    text: 'Aplikasi "Learning Management" ditambahkan',       time: '2 hari lalu' },
 ];
 
-const STATS = [
-  { label: 'Total Aplikasi',  value: 7,   icon: LayoutGrid, color: 'text-amber-500 dark:text-amber-400',   bg: 'bg-amber-500/10',  glow: 'shadow-amber-500/5 dark:shadow-amber-500/20'   },
-  { label: 'Total User',      value: 10,  icon: Users,      color: 'text-indigo-500 dark:text-indigo-400',  bg: 'bg-indigo-500/10', glow: 'shadow-indigo-500/5 dark:shadow-indigo-500/20'  },
-  { label: 'Aktif Hari Ini',  value: 8,   icon: Activity,   color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10',glow: 'shadow-emerald-500/5 dark:shadow-emerald-500/20' },
-  { label: 'Suspended',       value: 1,   icon: Lock,       color: 'text-rose-500 dark:text-rose-400',    bg: 'bg-rose-500/10',   glow: 'shadow-rose-500/5 dark:shadow-rose-500/20'    },
-];
+
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const [selectedMonth, setSelectedMonth] = useState({ year: 2026, month: 6 });
+  const [stats, setStats] = useState([
+    { label: 'Total Aplikasi',  value: 0,   icon: LayoutGrid, color: 'text-amber-500 dark:text-amber-400',   bg: 'bg-amber-500/10',  glow: 'shadow-amber-500/5 dark:shadow-amber-500/20'   },
+    { label: 'Total User',      value: 0,  icon: Users,      color: 'text-indigo-500 dark:text-indigo-400',  bg: 'bg-indigo-500/10', glow: 'shadow-indigo-500/5 dark:shadow-indigo-500/20'  },
+    { label: 'Aktif Hari Ini',  value: 0,   icon: Activity,   color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-emerald-500/10',glow: 'shadow-emerald-500/5 dark:shadow-emerald-500/20' },
+    { label: 'Suspended',       value: 0,   icon: Lock,       color: 'text-rose-500 dark:text-rose-400',    bg: 'bg-rose-500/10',   glow: 'shadow-rose-500/5 dark:shadow-rose-500/20'    },
+  ]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const [appsRes, usersRes] = await Promise.all([
+          api.get<any[]>('/apps?limit=1000'),
+          api.get<any[]>('/users?limit=1000'),
+        ]);
+
+        const appsCount = (appsRes.data || []).length;
+        const users = usersRes.data || [];
+        const usersCount = users.length;
+        const activeCount = users.filter((u: any) => u.isActive).length;
+        const suspendedCount = users.filter((u: any) => !u.isActive).length;
+
+        setStats([
+          { label: 'Total Aplikasi',  value: appsCount,   icon: LayoutGrid, color: 'text-amber-500 dark:text-amber-400',   bg: 'bg-amber-500/10',  glow: 'shadow-amber-500/5 dark:shadow-amber-500/20'   },
+          { label: 'Total User',      value: usersCount,  icon: Users,      color: 'text-indigo-500 dark:text-indigo-400',  bg: 'bg-indigo-500/10', glow: 'shadow-indigo-500/5 dark:shadow-indigo-500/20'  },
+          { label: 'Aktif Hari Ini',  value: activeCount,   icon: Activity,   color: 'text-emerald-500 dark:text-emerald-400', bg: 'bg-[#10b981]/10',glow: 'shadow-emerald-500/5 dark:shadow-emerald-500/20' },
+          { label: 'Suspended',       value: suspendedCount,   icon: Lock,       color: 'text-rose-500 dark:text-rose-400',    bg: 'bg-[#ef4444]/10',   glow: 'shadow-rose-500/5 dark:shadow-rose-500/20'    },
+        ]);
+      } catch (err) {
+        console.error('Error fetching admin statistics:', err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const dailyLogs = generateDailyLogs(selectedMonth.year, selectedMonth.month);
   const totalAccesses = dailyLogs.reduce((sum, d) => sum + d.total, 0);
@@ -330,7 +359,7 @@ export default function AdminPage() {
 
       {/* Stats — flat inline, no cards */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2.5 bg-white dark:bg-[#0f1623] px-5 py-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.06] shadow-sm">
-        {STATS.map((s, i, arr) => {
+        {stats.map((s, i, arr) => {
           const Icon = s.icon;
           return (
             <React.Fragment key={s.label}>

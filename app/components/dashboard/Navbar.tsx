@@ -60,6 +60,7 @@ interface NavbarProps {
   employee: {
     nama: string;
     bagian: { nama: string };
+    foto_profil?: string;
   };
 }
 
@@ -214,7 +215,7 @@ export default function Navbar({ employee }: NavbarProps) {
             </div>
 
             {/* Profile Summary */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <div className="flex flex-col text-right">
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-100 leading-none">
                   {employee.nama}
@@ -223,6 +224,17 @@ export default function Navbar({ employee }: NavbarProps) {
                   {employee.bagian.nama}
                 </span>
               </div>
+              {employee.foto_profil ? (
+                <img
+                  src={employee.foto_profil.startsWith('http') ? employee.foto_profil : `/uploads/${employee.foto_profil}`}
+                  alt={employee.nama}
+                  className="h-9 w-9 rounded-full object-cover shrink-0 border border-slate-200/80 dark:border-slate-700 shadow-sm"
+                />
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-xs shadow-sm">
+                  {employee.nama.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
           </div>
         </div>

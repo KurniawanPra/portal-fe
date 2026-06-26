@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
-import { api } from '@/lib/api';
+import { api, ApiRequestError } from '@/lib/api';
+import { getAccessToken } from '@/lib/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AuthMode = 'sso' | 'independent';
@@ -16,6 +17,7 @@ interface Aplikasi {
   id: string;
   nama: string;
   url: string;
+  icon: string;
   auth_mode: AuthMode;
   deskripsi: string;
   kategori: string;
@@ -31,6 +33,7 @@ interface ApiAplikasi {
   authMode: AuthMode;
   icon: string | null;
   deskripsi: string | null;
+  kategori?: string | null;
   urutan: number;
   isActive: boolean;
   createdAt: string;
@@ -45,11 +48,11 @@ const AUTH_BADGE: Record<AuthMode, string> = {
 };
 
 type FormData = Omit<Aplikasi, 'id' | 'dibuat_pada'>;
-const emptyForm: FormData = { nama: '', url: '', auth_mode: 'sso', deskripsi: '', kategori: 'Produktivitas', is_active: true, urutan: 1 };
+const emptyForm: FormData = { nama: '', url: '', icon: '', auth_mode: 'sso', deskripsi: '', kategori: 'Produktivitas', is_active: true, urutan: 1 };
 
 // ─── Shared Input styles ──────────────────────────────────────────────────────
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
-const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-550 dark:text-slate-400';
+const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-555 dark:text-slate-400';
 
 export default function ManajemenAplikasiPage() {
   const [apps, setApps] = useState<Aplikasi[]>([]);
@@ -58,10 +61,19 @@ export default function ManajemenAplikasiPage() {
   const [deleting, setDeleting] = useState(false);
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState<'Semua' | 'Aktif' | 'Non-Aktif'>('Semua');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterActive]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Aplikasi | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [customKategori, setCustomKategori] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Aplikasi | null>(null);
   const [toast, setToast] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -77,8 +89,9 @@ export default function ManajemenAplikasiPage() {
         id: app.id,
         nama: app.nama,
         url: app.url,
+        icon: app.icon || '',
         auth_mode: app.authMode,
-        kategori: app.icon || 'Lainnya',
+        kategori: app.kategori || 'Lainnya',
         deskripsi: app.deskripsi || '',
         urutan: app.urutan,
         is_active: app.isActive,
@@ -99,48 +112,112 @@ export default function ManajemenAplikasiPage() {
   const filtered = apps
     .filter(a => {
       const q = search.toLowerCase();
-      const matchSearch = a.nama.toLowerCase().includes(q) || a.kategori.toLowerCase().includes(q) || a.url.toLowerCase().includes(q);
+      const matchSearch = a.nama.toLowerCase().includes(q) || a.url.toLowerCase().includes(q) || a.deskripsi.toLowerCase().includes(q);
       const matchStatus = filterActive === 'Semua' || (filterActive === 'Aktif' ? a.is_active : !a.is_active);
       return matchSearch && matchStatus;
     })
     .sort((a, b) => a.urutan - b.urutan);
 
-  const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setModalOpen(true); }, []);
-  const openEdit   = useCallback((app: Aplikasi) => { setEditTarget(app); setForm({ nama: app.nama, url: app.url, auth_mode: app.auth_mode, deskripsi: app.deskripsi, kategori: app.kategori, is_active: app.is_active, urutan: app.urutan }); setModalOpen(true); }, []);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const openCreate = useCallback(() => {
+    setEditTarget(null);
+    setForm(emptyForm);
+    setErrors({});
+    setCustomKategori('');
+    setIconFile(null);
+    setModalOpen(true);
+  }, []);
+
+  const openEdit = useCallback((app: Aplikasi) => {
+    setEditTarget(app);
+    setErrors({});
+    const isStandard = KATEGORIS.filter(k => k !== 'Lainnya').includes(app.kategori);
+    setForm({
+      nama: app.nama,
+      url: app.url,
+      icon: app.icon,
+      auth_mode: app.auth_mode,
+      deskripsi: app.deskripsi,
+      kategori: isStandard ? app.kategori : 'Lainnya',
+      is_active: app.is_active,
+      urutan: app.urutan
+    });
+    setCustomKategori(isStandard ? '' : app.kategori);
+    setIconFile(null);
+    setModalOpen(true);
+  }, []);
   
   const handleSave = useCallback(async () => {
-    if (!form.nama.trim()) { showToast('err', 'Nama aplikasi wajib diisi.'); return; }
-    if (!form.url.trim()) { showToast('err', 'URL aplikasi wajib diisi.'); return; }
-    if (!form.kategori.trim()) { showToast('err', 'Kategori wajib diisi.'); return; }
-    if (!form.deskripsi.trim()) { showToast('err', 'Deskripsi wajib diisi.'); return; }
-    if (form.urutan <= 0) { showToast('err', 'Urutan tampil harus lebih dari 0.'); return; }
+    setErrors({});
+    if (!form.nama.trim()) { setErrors(e => ({ ...e, nama: 'Nama aplikasi wajib diisi.' })); showToast('err', 'Nama aplikasi wajib diisi.'); return; }
+    if (!form.url.trim()) { setErrors(e => ({ ...e, url: 'URL aplikasi wajib diisi.' })); showToast('err', 'URL aplikasi wajib diisi.'); return; }
+    
+    const finalKategori = form.kategori === 'Lainnya' ? customKategori.trim() : form.kategori;
+    if (!finalKategori) { setErrors(e => ({ ...e, kategori: 'Kategori wajib diisi.' })); showToast('err', 'Kategori wajib diisi.'); return; }
+    
+    if (!form.deskripsi.trim()) { setErrors(e => ({ ...e, deskripsi: 'Deskripsi wajib diisi.' })); showToast('err', 'Deskripsi wajib diisi.'); return; }
+    if (form.urutan <= 0) { setErrors(e => ({ ...e, urutan: 'Urutan tampil harus lebih dari 0.' })); showToast('err', 'Urutan tampil harus lebih dari 0.'); return; }
     setSaving(true);
     try {
       const payload = {
         nama: form.nama,
         url: form.url,
         authMode: form.auth_mode,
-        icon: form.kategori,
+        icon: form.icon || null,
+        kategori: finalKategori,
         deskripsi: form.deskripsi,
         urutan: form.urutan,
         isActive: form.is_active
       };
 
+      let appId = '';
       if (editTarget) {
         await api.put(`/apps/${editTarget.id}`, payload);
+        appId = editTarget.id;
         showToast('ok', `"${form.nama}" berhasil diperbarui.`);
       } else {
-        await api.post('/apps', payload);
+        const res = await api.post<any>('/apps', payload);
+        appId = res.data.id;
         showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
       }
+
+      // Icon upload if selected
+      if (iconFile && appId) {
+        const fd = new FormData();
+        fd.append('icon', iconFile);
+        const token = getAccessToken();
+        const uploadRes = await fetch(`/api/apps/${appId}/icon`, {
+          method: 'POST',
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+          body: fd,
+        });
+        if (!uploadRes.ok) {
+          throw new Error('Gagal mengunggah icon aplikasi.');
+        }
+      }
+
       setModalOpen(false);
       fetchData();
     } catch (err) {
-      showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+      if (err instanceof ApiRequestError && err.details) {
+        const fieldErrors: Record<string, string> = {};
+        err.details.forEach(d => {
+          let fieldName = d.field;
+          if (fieldName === 'authMode') fieldName = 'auth_mode';
+          if (fieldName === 'isActive') fieldName = 'is_active';
+          fieldErrors[fieldName] = d.message;
+        });
+        setErrors(fieldErrors);
+        showToast('err', err.message || 'Gagal menyimpan.');
+      } else {
+        showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan.');
+      }
     } finally {
       setSaving(false);
     }
-  }, [form, editTarget, fetchData]);
+  }, [form, editTarget, iconFile, customKategori, fetchData]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -233,7 +310,7 @@ export default function ManajemenAplikasiPage() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
             <input
               type="text"
-              placeholder="Cari nama, kategori, atau URL..."
+              placeholder="Cari nama, URL, atau deskripsi..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className={`${inputCls} pl-10`}
@@ -274,17 +351,28 @@ export default function ManajemenAplikasiPage() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="px-5 py-12 text-center text-sm font-semibold text-slate-450 dark:text-slate-500">Tidak ada aplikasi yang sesuai.</td></tr>
-                ) : filtered.map(app => (
+                  <tr><td colSpan={7} className="px-5 py-12 text-center text-sm font-semibold text-slate-455 dark:text-slate-500">Tidak ada aplikasi yang sesuai.</td></tr>
+                ) : paginatedData.map(app => (
                   <tr key={app.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
                     <td className="px-5 py-3.5 text-xs font-bold text-slate-450 dark:text-slate-600">{app.urutan}</td>
                     <td className="px-5 py-3.5">
-                      <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{app.nama}</p>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Globe className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                        <a href={app.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-550 hover:text-amber-550 dark:hover:text-amber-400 transition-colors truncate max-w-[180px]">
-                          {app.url}
-                        </a>
+                      <div className="flex items-center gap-3">
+                        {app.icon ? (
+                          <img src={app.icon.startsWith('http') ? app.icon : `/uploads/${app.icon}`} alt={app.nama} className="h-8 w-8 rounded-lg object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <LayoutGrid className="h-4 w-4 text-amber-500" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{app.nama}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <Globe className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
+                            <a href={app.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-550 hover:text-amber-550 dark:hover:text-amber-400 transition-colors truncate max-w-[180px]">
+                              {app.url}
+                            </a>
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="px-5 py-3.5">
@@ -333,8 +421,61 @@ export default function ManajemenAplikasiPage() {
             </table>
           )}
         </div>
-        <div className="px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] text-[11px] font-bold text-slate-455 dark:text-slate-500">
-          {filtered.length} dari {apps.length} aplikasi
+        {/* Pagination Footer */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01] text-[11px] font-bold text-slate-550 dark:text-slate-400">
+          <div>
+            {filtered.length === 0 ? (
+              <span>Menampilkan 0 entri</span>
+            ) : (
+              <span>
+                Menampilkan {Math.min((currentPage - 1) * itemsPerPage + 1, filtered.length)} - {Math.min(currentPage * itemsPerPage, filtered.length)} dari {filtered.length} entri
+                {filtered.length !== apps.length && ` (disaring dari ${apps.length} total)`}
+              </span>
+            )}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center gap-1.5">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                className="rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04] disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer focus:outline-none"
+              >
+                Sebelumnya
+              </button>
+              
+              {/* Page Numbers */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, idx, arr) => {
+                  const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600">...</span>}
+                      <button
+                        onClick={() => setCurrentPage(page)}
+                        className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all cursor-pointer focus:outline-none ${
+                          currentPage === page
+                            ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
+                            : 'border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                className="rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] px-2.5 py-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-55 dark:hover:bg-white/[0.04] disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer focus:outline-none"
+              >
+                Selanjutnya
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -372,11 +513,50 @@ export default function ManajemenAplikasiPage() {
               <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto hide-scrollbar">
                 <div>
                   <label className={labelCls}>Nama Aplikasi *</label>
-                  <input type="text" value={form.nama} onChange={e => setForm(f => ({ ...f, nama: e.target.value }))} placeholder="cth: Google Workspace" className={inputCls} />
+                  <input type="text" value={form.nama} onChange={e => setForm(f => ({ ...f, nama: e.target.value }))} placeholder="cth: Google Workspace" className={`${inputCls} ${errors.nama ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                  {errors.nama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nama}</span>}
                 </div>
                 <div>
                   <label className={labelCls}>URL Aplikasi *</label>
-                  <input type="text" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://aplikasi.inl.co.id" className={inputCls} />
+                  <input type="text" value={form.url} onChange={e => setForm(f => ({ ...f, url: e.target.value }))} placeholder="https://aplikasi.inl.co.id" className={`${inputCls} ${errors.url ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                  {errors.url && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.url}</span>}
+                </div>
+                {/* Icon Upload */}
+                <div className="space-y-2">
+                  <label className={labelCls}>Icon Aplikasi (PNG/JPEG/GIF)</label>
+                  <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
+                    <div className="shrink-0">
+                      {iconFile ? (
+                        <img
+                          src={URL.createObjectURL(iconFile)}
+                          alt="Preview"
+                          className="h-14 w-14 rounded-xl object-contain border-2 border-amber-500"
+                        />
+                      ) : form.icon ? (
+                        <img
+                          src={form.icon.startsWith('http') ? form.icon : `/uploads/${form.icon}`}
+                          alt="Current"
+                          className="h-14 w-14 rounded-xl object-contain border border-slate-200 dark:border-white/[0.08]"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xl">
+                          <LayoutGrid className="h-6 w-6" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setIconFile(file);
+                        }}
+                        className="w-full text-xs text-slate-555 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-amber-500/10 file:text-amber-600 dark:file:text-amber-400 hover:file:bg-amber-500/20 cursor-pointer"
+                      />
+                      <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Format: PNG, JPG, GIF. Max 2MB.</p>
+                    </div>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -404,14 +584,29 @@ export default function ManajemenAplikasiPage() {
                     </div>
                   </div>
                 </div>
+                {form.kategori === 'Lainnya' && (
+                  <div className="animate-fade-in space-y-1">
+                    <label className={labelCls}>Kategori Kustom *</label>
+                    <input
+                      type="text"
+                      value={customKategori}
+                      onChange={e => setCustomKategori(e.target.value)}
+                      placeholder="Masukkan nama kategori kustom..."
+                      className={`${inputCls} ${errors.kategori ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
+                    />
+                    {errors.kategori && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.kategori}</span>}
+                  </div>
+                )}
                 <div>
                   <label className={labelCls}>Urutan Tampil</label>
-                  <input type="number" min={1} value={form.urutan} onChange={e => setForm(f => ({ ...f, urutan: parseInt(e.target.value) || 1 }))} className={inputCls} />
+                  <input type="number" min={1} value={form.urutan} onChange={e => setForm(f => ({ ...f, urutan: parseInt(e.target.value) || 1 }))} className={`${inputCls} ${errors.urutan ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                  {errors.urutan && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.urutan}</span>}
                 </div>
                 <div>
                   <label className={labelCls}>Deskripsi</label>
                   <textarea value={form.deskripsi} onChange={e => setForm(f => ({ ...f, deskripsi: e.target.value }))} placeholder="Deskripsi singkat fungsi aplikasi..." rows={3}
-                    className={`${inputCls} resize-none`} />
+                    className={`${inputCls} resize-none ${errors.deskripsi ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                  {errors.deskripsi && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.deskripsi}</span>}
                 </div>
                 {/* Toggle status */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-white/[0.03] px-4 py-3">

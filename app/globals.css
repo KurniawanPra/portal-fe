@@ -13,6 +13,23 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Native date/time picker icon: dark on light mode, white on dark mode */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"] {
+  color-scheme: light;
+}
+
+.dark input[type="date"],
+.dark input[type="datetime-local"],
+.dark input[type="time"],
+.dark input[type="month"],
+.dark input[type="week"] {
+  color-scheme: dark;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
