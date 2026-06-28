@@ -40,6 +40,11 @@ function useIsLowEnd(): boolean {
 
 export default function LoginPage() {
   const isLowEnd = useIsLowEnd();
+  const [mounted, setMounted] = useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [is3dHovered, setIs3dHovered] = useState(false);
@@ -72,22 +77,38 @@ export default function LoginPage() {
         .animate-soundwave-3 { animation: soundwave-3 0.9s ease-in-out infinite 0.2s; }
         .animate-soundwave-4 { animation: soundwave-4 0.6s ease-in-out infinite 0.15s; }
         
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 5px;
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
         }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(156, 163, 175, 0.25);
-          border-radius: 9999px;
+
+        /* Auto-scale down the login container on short screens to avoid clipping & scrollbars */
+        @media (max-height: 840px) {
+          .login-card-container {
+            transform: scale(0.92);
+            transform-origin: center center;
+          }
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(156, 163, 175, 0.45);
+        @media (max-height: 740px) {
+          .login-card-container {
+            transform: scale(0.84);
+            transform-origin: center center;
+          }
         }
-        .custom-scrollbar {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(156, 163, 175, 0.25) transparent;
+        @media (max-height: 640px) {
+          .login-card-container {
+            transform: scale(0.76);
+            transform-origin: center center;
+          }
+        }
+        @media (max-height: 560px) {
+          .login-card-container {
+            transform: scale(0.68);
+            transform-origin: center center;
+          }
         }
       `}} />
 
@@ -101,14 +122,14 @@ export default function LoginPage() {
         >
           Situs Utama →
         </a>
-        <ThemeTogglerButton variant="pill" size="sm" />
+        {mounted && <ThemeTogglerButton variant="pill" size="sm" />}
       </div>
 
       {/* Foreground */}
       <div className="relative z-20 flex min-h-screen lg:h-full w-full flex-col lg:flex-row justify-between">
         {/* Left Side: Login Form (Flex layout to prevent overlapping) */}
         <div className={cn(
-          'w-full lg:w-[45%] min-h-screen lg:h-screen flex flex-col justify-between py-6 px-4 sm:p-8 md:p-10 lg:py-8 z-20 relative lg:overflow-y-auto custom-scrollbar',
+          'w-full lg:w-[45%] h-screen flex flex-col justify-between py-6 px-4 sm:p-8 md:p-10 lg:py-8 z-20 relative overflow-hidden no-scrollbar',
           'bg-white/5 dark:bg-slate-950/10 border-r border-white/5 dark:border-slate-800/10',
           // Lighter backdrop blur on low-end to save GPU memory bandwidth
           isLowEnd ? 'backdrop-blur-sm' : 'backdrop-filter backdrop-blur-[2px]',
@@ -140,8 +161,8 @@ export default function LoginPage() {
           </div>
 
           {/* Footer relative to panel */}
-          <p className="text-center text-xs text-slate-500 dark:text-slate-450 font-medium select-none z-30 pt-4">
-            © {new Date().getFullYear()} PT Industri Nabati Lestari — KEK Sei Mangkei. Seluruh hak cipta dilindungi.
+          <p className="text-center text-xs text-slate-500 dark:text-slate-400 font-medium select-none z-30 pt-4">
+            © {mounted ? new Date().getFullYear() : '2026'} PT Industri Nabati Lestari — KEK Sei Mangkei. Seluruh hak cipta dilindungi.
           </p>
         </div>
 
@@ -175,23 +196,27 @@ export default function LoginPage() {
           )}
 
           {/* Hole Background */}
-          <HoleBackground
-            className="absolute inset-y-0 -left-[20%] -right-[20%] z-0"
-            style={{
-              maskImage: 'linear-gradient(to right, transparent, rgba(0, 0, 0, 1) 30%)',
-              WebkitMaskImage: 'linear-gradient(to right, transparent, rgba(0, 0, 0, 1) 30%)',
-            }}
-            strokeColor="#737373"
-            numberOfLines={holeLines}
-            numberOfDiscs={holeDiscs}
-            particleRGBColor={[255, 255, 255]}
-            lowEndMode={isLowEnd}
-          />
+          {mounted && (
+            <HoleBackground
+              className="absolute inset-y-0 -left-[20%] -right-[20%] z-0"
+              style={{
+                maskImage: 'linear-gradient(to right, transparent, rgba(0, 0, 0, 1) 30%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent, rgba(0, 0, 0, 1) 30%)',
+              }}
+              strokeColor="#737373"
+              numberOfLines={holeLines}
+              numberOfDiscs={holeDiscs}
+              particleRGBColor={[255, 255, 255]}
+              lowEndMode={isLowEnd}
+            />
+          )}
 
           {/* 3D Scene */}
-          <div className="absolute inset-y-0 -left-[20%] -right-[20%] z-10">
-            <Inl3DScene isHoveredExternal={is3dHovered} />
-          </div>
+          {mounted && (
+            <div className="absolute inset-y-0 -left-[20%] -right-[20%] z-10">
+              <Inl3DScene isHoveredExternal={is3dHovered} />
+            </div>
+          )}
 
           {/* Floating Audio Controller */}
           <div className="absolute bottom-4 right-4 z-30 flex items-center gap-3">
