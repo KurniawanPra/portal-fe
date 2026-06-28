@@ -61,7 +61,7 @@ export default function LoginPage() {
   const holeDiscs  = isLowEnd ? 28 : 55;
 
   return (
-    <div className="relative h-screen w-full bg-[#f8fafc] dark:bg-[#0b0f17] overflow-hidden transition-colors duration-300">
+    <div className="relative min-h-screen lg:h-screen w-full bg-[#f8fafc] dark:bg-[#0b0f17] lg:overflow-hidden transition-colors duration-300">
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes soundwave-1 { 0%, 100% { height: 4px; } 50% { height: 14px; } }
         @keyframes soundwave-2 { 0%, 100% { height: 6px; } 50% { height: 16px; } }
@@ -72,30 +72,6 @@ export default function LoginPage() {
         .animate-soundwave-3 { animation: soundwave-3 0.9s ease-in-out infinite 0.2s; }
         .animate-soundwave-4 { animation: soundwave-4 0.6s ease-in-out infinite 0.15s; }
       `}} />
-
-      {/* Floating Top-Left Glassmorphism Brand Card */}
-      <header className={cn(
-        'login-header absolute top-4 left-4 z-30 flex items-center gap-3 rounded-2xl border',
-        'border-t-white/60 border-l-white/60 border-r-white/20 border-b-white/10',
-        'bg-gradient-to-br from-white/20 to-white/10 dark:from-[#121620]/20 dark:to-[#121620]/10',
-        // Lighter blur on low-end
-        isLowEnd ? 'backdrop-blur-md' : 'backdrop-filter backdrop-blur-3xl',
-        'px-5 py-2.5 shadow-[0_16px_32px_-8px_rgba(15,23,42,0.12)] dark:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.45)]',
-        'transition-all duration-300 sm:top-8 sm:left-8'
-      )}>
-        <Image
-          src="/img/logo.png"
-          alt="Logo PT INL"
-          width={90}
-          height={90}
-          className="h-10 w-10 sm:h-12 sm:w-12 object-contain"
-          priority
-        />
-        <div className="flex flex-col">
-          <span className="text-xs sm:text-sm font-bold tracking-tight text-slate-800 dark:text-slate-100">PT Industri Nabati Lestari</span>
-          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-500">Portal SSO</span>
-        </div>
-      </header>
 
       {/* Floating Top-Right Quick Actions */}
       <div className="login-quick-actions absolute top-4 right-4 z-30 flex items-center gap-4 sm:top-8 sm:right-8">
@@ -111,20 +87,42 @@ export default function LoginPage() {
       </div>
 
       {/* Foreground */}
-      <div className="relative z-20 flex h-full w-full flex-col lg:flex-row justify-between">
-        {/* Left Side: Login Form (Vertically Centered) */}
+      <div className="relative z-20 flex min-h-screen lg:h-full w-full flex-col lg:flex-row justify-between">
+        {/* Left Side: Login Form (Flex layout to prevent overlapping) */}
         <div className={cn(
-          'w-full lg:w-[45%] h-full flex items-center justify-center p-4 sm:p-6 md:p-8 z-20 relative',
+          'w-full lg:w-[45%] min-h-screen lg:h-screen flex flex-col justify-between py-6 px-4 sm:p-8 md:p-10 lg:py-8 z-20 relative lg:overflow-y-auto',
           'bg-white/5 dark:bg-slate-950/10 border-r border-white/5 dark:border-slate-800/10',
           // Lighter backdrop blur on low-end to save GPU memory bandwidth
           isLowEnd ? 'backdrop-blur-sm' : 'backdrop-filter backdrop-blur-[2px]',
         )}>
-          <div className="login-card-container w-full flex flex-col items-center justify-center animate-ios-page max-w-md">
+          {/* Brand Header inside left side */}
+          <header className={cn(
+            'login-header flex items-center gap-3 rounded-2xl border select-none w-fit',
+            'border-t-white/60 border-l-white/60 border-r-white/20 border-b-white/10',
+            'bg-gradient-to-br from-white/20 to-white/10 dark:from-[#121620]/20 dark:to-[#121620]/10',
+            isLowEnd ? 'backdrop-blur-md' : 'backdrop-filter backdrop-blur-2xl',
+            'px-4 py-2 shadow-sm'
+          )}>
+            <Image
+              src="/img/logo.png"
+              alt="Logo PT INL"
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+              priority
+            />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold tracking-tight text-slate-800 dark:text-slate-100">PT Industri Nabati Lestari</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-500">Portal SSO</span>
+            </div>
+          </header>
+
+          <div className="login-card-container w-full flex-1 flex items-center justify-center py-6 sm:py-8 animate-ios-page max-w-md mx-auto">
             <LoginCard />
           </div>
 
-          {/* Footer positioned absolutely at the bottom */}
-          <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-slate-500 dark:text-slate-450 font-medium select-none z-30 px-4">
+          {/* Footer relative to panel */}
+          <p className="text-center text-xs text-slate-500 dark:text-slate-450 font-medium select-none z-30 pt-4">
             © {new Date().getFullYear()} PT Industri Nabati Lestari — KEK Sei Mangkei. Seluruh hak cipta dilindungi.
           </p>
         </div>

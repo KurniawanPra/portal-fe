@@ -7,9 +7,9 @@ import {
   IdCard, Loader2, ChevronDown
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
-import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { api } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { PrimaryButton, FilterDropdown, CrudPagination } from '@/admin/master/components/shared';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type JenisKelamin = 'L' | 'P';
@@ -30,12 +30,12 @@ interface ApiEmployee {
   nomorHp: string | null;
   alamat: string | null;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
   fotoProfil: string | null;
   statusKaryawanId: string | null;
   pendidikanTerakhirId: string | null;
   statusPernikahanId: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface UnitOrganisasi {
@@ -142,6 +142,12 @@ export default function ManajemenEmployeePage() {
   const [search, setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState<'Semua' | 'Aktif' | 'Non-Aktif'>('Semua');
   const [filterGender, setFilterGender] = useState<'Semua' | 'L' | 'P'>('Semua');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filterStatus, filterGender]);
 
   const [modalOpen,    setModalOpen]    = useState(false);
   const [editTarget,   setEditTarget]   = useState<EmployeeData | null>(null);
@@ -245,6 +251,9 @@ export default function ManajemenEmployeePage() {
       return matchSearch && matchStatus && matchGender;
     });
   }, [employees, search, filterStatus, filterGender]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+  const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const openCreate = useCallback(() => {
     setEditTarget(null);
@@ -431,36 +440,35 @@ export default function ManajemenEmployeePage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
-            <Briefcase className="h-6 w-6 text-amber-500 dark:text-amber-400" />
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             Manajemen Employee
           </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-550 dark:text-slate-400">Kelola data karyawan PT Industri Nabati Lestari.</p>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Kelola data karyawan PT Industri Nabati Lestari.</p>
         </div>
-        <LiquidButton variant="outline" size="sm" onClick={openCreate} className="cursor-pointer flex items-center gap-2 font-bold">
+        <PrimaryButton onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Tambah Employee
-        </LiquidButton>
+        </PrimaryButton>
       </div>
 
       {/* Stats — flat inline */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label: 'Total',    value: employees.length, icon: Users,     color: 'text-amber-500 dark:text-amber-400'    },
-          { label: 'Aktif',    value: activeCount,      icon: UserCheck, color: 'text-emerald-500 dark:text-emerald-455' },
-          { label: 'Non-Aktif',value: inactiveCount,    icon: UserX,     color: 'text-rose-500 dark:text-rose-405'      },
-          { label: 'Laki-laki',value: maleCount,        icon: Users,     color: 'text-blue-500 dark:text-blue-400'      },
-          { label: 'Perempuan',value: femaleCount,       icon: Users,     color: 'text-pink-500 dark:text-pink-400'      },
+          { label: 'Total',    value: employees.length, icon: Users,     color: 'text-amber-600 dark:text-amber-400'    },
+          { label: 'Aktif',    value: activeCount,      icon: UserCheck, color: 'text-emerald-650 dark:text-emerald-450' },
+          { label: 'Non-Aktif',value: inactiveCount,    icon: UserX,     color: 'text-rose-650 dark:text-rose-455'      },
+          { label: 'Laki-laki',value: maleCount,        icon: Users,     color: 'text-blue-650 dark:text-blue-400'      },
+          { label: 'Perempuan',value: femaleCount,       icon: Users,     color: 'text-pink-650 dark:text-pink-400'      },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
             <React.Fragment key={s.label}>
               <div className="flex items-center gap-2">
                 <Icon className={`h-4 w-4 shrink-0 ${s.color}`} />
-                <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
-                <span className="text-xs font-bold text-slate-500">{s.label}</span>
+                <span className="text-sm font-bold text-slate-850 dark:text-white">{s.value}</span>
+                <span className="text-xs font-semibold text-slate-550 dark:text-slate-400">{s.label}</span>
               </div>
-              {i < arr.length - 1 && <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.1] shrink-0" />}
+              {i < arr.length - 1 && <span className="h-4 w-px bg-slate-200 dark:bg-slate-850 shrink-0" />}
             </React.Fragment>
           );
         })}
@@ -478,23 +486,25 @@ export default function ManajemenEmployeePage() {
               className={`${inputCls} pl-10`} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              {(['Semua', 'Aktif', 'Non-Aktif'] as const).map(s => (
-                <button key={s} onClick={() => setFilterStatus(s)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all cursor-pointer focus:outline-none ${filterStatus===s ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30' : 'text-slate-555 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'}`}>
-                  {s}
-                </button>
-              ))}
-            </div>
+            <FilterDropdown<'Semua' | 'Aktif' | 'Non-Aktif'>
+              value={filterStatus}
+              onChange={setFilterStatus}
+              options={[
+                { label: 'Semua Status', value: 'Semua' },
+                { label: 'Aktif', value: 'Aktif' },
+                { label: 'Non-Aktif', value: 'Non-Aktif' },
+              ]}
+            />
             <div className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.08]" />
-            <div className="flex items-center gap-1">
-              {(['Semua', 'L', 'P'] as const).map(g => (
-                <button key={g} onClick={() => setFilterGender(g)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all cursor-pointer focus:outline-none ${filterGender===g ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30' : 'text-slate-555 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'}`}>
-                  {g === 'L' ? 'Laki-laki' : g === 'P' ? 'Perempuan' : g}
-                </button>
-              ))}
-            </div>
+            <FilterDropdown<'Semua' | 'L' | 'P'>
+              value={filterGender}
+              onChange={setFilterGender}
+              options={[
+                { label: 'Semua Gender', value: 'Semua' },
+                { label: 'Laki-laki', value: 'L' },
+                { label: 'Perempuan', value: 'P' },
+              ]}
+            />
           </div>
         </div>
 
@@ -520,7 +530,7 @@ export default function ManajemenEmployeePage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={7} className="px-5 py-12 text-center text-sm font-semibold text-slate-400 dark:text-slate-500">Tidak ada employee yang sesuai.</td></tr>
-              ) : filtered.map(e => (
+              ) : paginatedData.map(e => (
                 <tr key={e.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
                   {/* Employee */}
                   <td className="px-5 py-3.5">
@@ -601,9 +611,11 @@ export default function ManajemenEmployeePage() {
             </tbody>
           </table>
         </div>
-        <div className="px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] text-[11px] font-bold text-slate-450 dark:text-slate-500">
-          {filtered.length} dari {employees.length} employee
-        </div>
+        <CrudPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Create/Edit Modal via Portal */}
@@ -969,10 +981,10 @@ export default function ManajemenEmployeePage() {
               </div>
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
                 <button onClick={() => setModalOpen(false)} disabled={saving} className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
-                <LiquidButton variant="outline" size="sm" onClick={handleSave} disabled={saving} className="cursor-pointer font-bold flex items-center gap-2">
-                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-550" />}
+                <PrimaryButton onClick={handleSave} disabled={saving} className="flex items-center gap-2">
+                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {editTarget ? 'Simpan Perubahan' : 'Tambahkan'}
-                </LiquidButton>
+                </PrimaryButton>
               </div>
             </div>
           </div>

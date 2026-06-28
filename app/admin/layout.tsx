@@ -25,16 +25,24 @@ interface UnitOrganisasi {
   parentId: string | null;
 }
 
+// Global in-memory cache to persist admin auth state across layout remounts
+let cachedAuthorized = false;
+let cachedProfile: { nama: string; jabatan: string; bagian: { nama: string } } | null = null;
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
+  const [authorized, setAuthorized] = useState(cachedAuthorized);
   const [adminProfile, setAdminProfile] = useState<{
     nama: string;
     jabatan: string;
     bagian: { nama: string };
-  } | null>(null);
+  } | null>(cachedProfile);
 
   useEffect(() => {
+    // Hanya fetch jika belum terotorisasi
+    if (cachedAuthorized && cachedProfile) {
+      return;
+    }
     const checkAuth = async () => {
       const token = getAccessToken();
       if (!token) {
@@ -50,18 +58,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
 
         if (user.employeeId) {
-          const [empRes, unitRes] = await Promise.all([
-            api.get<any>(`/employees/${user.employeeId}`),
-            api.get<UnitOrganisasi[]>('/org/unit?limit=200'),
-          ]);
+          const empRes = await api.get<any>(`/employees/${user.employeeId}`);
           const emp = empRes.data;
-          const units = unitRes.data || [];
-          const unit = units.find(u => u.id === emp.unitOrganisasiId);
-          setAdminProfile({
+          
+          let unitName = '-';
+          if (emp.unitOrganisasiId) {
+            try {
+              const unitRes = await api.get<UnitOrganisasi>(`/org/unit/${emp.unitOrganisasiId}`);
+              if (unitRes.data) {
+                unitName = unitRes.data.nama;
+              }
+            } catch (err) {
+              // Ignore unit fetch error, fallback to '-'
+            }
+          }
+          
+          const profile = {
             nama: emp.nama,
             jabatan: emp.jabatan,
-            bagian: { nama: unit ? unit.nama : '-' },
-          });
+            bagian: { nama: unitName },
+            foto_profil: emp.fotoProfil || undefined,
+          };
+          setAdminProfile(profile);
+          cachedProfile = profile;
         } else {
           let nameFallback = 'Administrator';
           let titleFallback = 'Super Admin';
@@ -79,16 +98,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               .join(' ');
           }
 
-          setAdminProfile({
+          const profile = {
             nama: nameFallback,
             jabatan: titleFallback,
             bagian: { nama: bagianFallback },
-          });
+          };
+          setAdminProfile(profile);
+          cachedProfile = profile;
         }
 
         setAuthorized(true);
+        cachedAuthorized = true;
       } catch {
         clearTokens();
+        cachedAuthorized = false;
+        cachedProfile = null;
         router.push('/login');
       }
     };
@@ -111,6 +135,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       // Ignore
     } finally {
       clearTokens();
+      cachedAuthorized = false;
+      cachedProfile = null;
       router.push('/login');
     }
   };

@@ -2,12 +2,17 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Building2, GitBranch, Plus, Pencil, Trash2, X, CheckCircle2, AlertCircle, Search,
-  ToggleLeft, ToggleRight, Loader2, Server, ChevronDown
+  Building2, GitBranch, Plus, Pencil, Trash2, X, Search, Loader2, Server, ChevronDown,
+  CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { SearchSelect } from '@/components/ui/SearchSelect';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { api, ApiRequestError } from '@/lib/api';
+import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
+import {
+  inputCls, labelCls, Toast, TableCard, ActiveToggle, PrimaryButton, FilterDropdown
+} from '@/admin/master/components/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TipeUnit = 'direktorat' | 'sevp' | 'bagian' | 'sub_bagian' | 'seksi';
@@ -38,8 +43,6 @@ interface FormData {
 }
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
-const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
-const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-wide text-slate-550 dark:text-slate-400';
 
 const TIPE_UNIT_BADGES: Record<TipeUnit, string> = {
   direktorat: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
@@ -65,71 +68,16 @@ const emptyForm: FormData = {
   isActive: true,
 };
 
-// ─── Sub-Components ───────────────────────────────────────────────────────────
-function Toast({ toast }: { toast: { type: 'ok' | 'err'; text: string } | null }) {
-  if (!toast) return null;
-  return (
-    <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type === 'ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
-      {toast.type === 'ok' ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />}
-      {toast.text}
-    </div>
-  );
-}
-
-function TableCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] shadow-lg">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
-      {children}
-    </div>
-  );
-}
-
-function ActiveToggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
-  return (
-    <button
-      disabled={disabled}
-      onClick={() => onChange(!value)}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide transition-all duration-200 cursor-pointer focus:outline-none disabled:opacity-50 ${value ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 border-slate-200 dark:border-white/[0.06] hover:bg-slate-250 dark:hover:bg-white/[0.08]'}`}
-    >
-      {value ? <ToggleRight className="h-3 w-3" /> : <ToggleLeft className="h-3 w-3" />}
-      {value ? 'Aktif' : 'Nonaktif'}
-    </button>
-  );
-}
-
-function DeleteModal({ open, name, onCancel, onConfirm, deleting }: { open: boolean; name: string; onCancel: () => void; onConfirm: () => void; deleting?: boolean }) {
-  return (
-    <ModalPortal open={open}>
-      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={onCancel} />
-      <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
-          <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20">
-              <Trash2 className="h-5 w-5 text-rose-500 dark:text-rose-400" />
-            </div>
-            <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus Unit Organisasi?</h3>
-            <p className="mt-2 text-sm text-slate-550 dark:text-slate-400 leading-relaxed">
-              Unit <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{name}&quot;</span> beserta seluruh sub-unitnya akan dihapus permanen.
-            </p>
-            <div className="mt-5 flex gap-3">
-              <button disabled={deleting} onClick={onCancel} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-550 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all cursor-pointer focus:outline-none">Batal</button>
-              <button disabled={deleting} onClick={onConfirm} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-all cursor-pointer shadow-lg shadow-rose-500/20 flex items-center justify-center gap-1.5 focus:outline-none">
-                {deleting && <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />}
-                {deleting ? 'Menghapus...' : 'Hapus'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ModalPortal>
-  );
-}
-
 // ─── Main Page Component ─────────────────────────────────────────────────────
 export default function UnitOrganisasiPage() {
   const [unitOrganisasis, setUnitOrganisasis] = useState<UnitOrganisasi[]>([]);
+  const [tipeUnits, setTipeUnits]             = useState<any[]>([
+    { id: 'direktorat', label: 'Direktorat' },
+    { id: 'sevp', label: 'SEVP' },
+    { id: 'bagian', label: 'Bagian' },
+    { id: 'sub_bagian', label: 'Sub Bagian' },
+    { id: 'seksi', label: 'Seksi' },
+  ]);
   const [loading, setLoading]                 = useState(true);
   const [saving, setSaving]                   = useState(false);
   const [deleting, setDeleting]               = useState(false);
@@ -159,8 +107,12 @@ export default function UnitOrganisasiPage() {
   // ─── Fetch Data ────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     try {
-      const res = await api.get<UnitOrganisasi[]>('/org/unit?limit=200');
-      setUnitOrganisasis(res.data || []);
+      const [unitRes, tipeRes] = await Promise.all([
+        api.get<UnitOrganisasi[]>('/org/unit?limit=1000'),
+        api.get<any[]>('/master/tipe-unit'),
+      ]);
+      setUnitOrganisasis(unitRes.data || []);
+      setTipeUnits(tipeRes.data || []);
     } catch (err) {
       showToast('err', err instanceof Error ? err.message : 'Gagal memuat data.');
     } finally {
@@ -190,6 +142,7 @@ export default function UnitOrganisasiPage() {
     return unitOrganisasis.filter(u => {
       const isCurrentParent = editTarget && editTarget.parentId === u.id;
       if (!u.isActive && !isCurrentParent) return false;
+
       if (TYPE_RANK[u.tipe] <= TYPE_RANK[form.tipe]) return false;
       if (editTarget && u.id === editTarget.id) return false;
       if (editTarget && isDescendant(u.id, editTarget.id)) return false;
@@ -330,41 +283,40 @@ export default function UnitOrganisasiPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
-            <GitBranch className="h-6 w-6 text-amber-500 dark:text-amber-400" />
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             Manajemen Unit Organisasi
           </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-550 dark:text-slate-400">Kelola hierarki unit organisasi PT Industri Nabati Lestari.</p>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Kelola hierarki unit organisasi PT Industri Nabati Lestari.</p>
         </div>
-        <LiquidButton variant="outline" size="sm" onClick={openCreate} className="cursor-pointer flex items-center gap-2 font-bold">
+        <PrimaryButton onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Tambah Unit
-        </LiquidButton>
+        </PrimaryButton>
       </div>
 
       {/* Stats */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label: 'Total Unit', value: unitOrganisasis.length, icon: Server,     color: 'text-amber-500 dark:text-amber-400' },
-          { label: 'Aktif',      value: activeCount,           icon: CheckCircle2, color: 'text-emerald-500 dark:text-emerald-450' },
-          { label: 'Non-Aktif',  value: inactiveCount,         icon: AlertCircle,  color: 'text-rose-500 dark:text-rose-400' },
+          { label: 'Total Unit', value: unitOrganisasis.length, icon: Server,     color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Aktif',      value: activeCount,           icon: CheckCircle2, color: 'text-emerald-655 dark:text-emerald-450' },
+          { label: 'Non-Aktif',  value: inactiveCount,         icon: AlertCircle,  color: 'text-rose-655 dark:text-rose-455' },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
             <React.Fragment key={s.label}>
               <div className="flex items-center gap-2">
                 <Icon className={`h-4 w-4 shrink-0 ${s.color}`} />
-                <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
-                <span className="text-xs font-bold text-slate-500">{s.label}</span>
+                <span className="text-sm font-bold text-slate-850 dark:text-white">{s.value}</span>
+                <span className="text-xs font-semibold text-slate-550 dark:text-slate-400">{s.label}</span>
               </div>
-              {i < arr.length - 1 && <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.1] shrink-0" />}
+              {i < arr.length - 1 && <span className="h-4 w-px bg-slate-200 dark:bg-slate-850 shrink-0" />}
             </React.Fragment>
           );
         })}
       </div>
 
       {/* Main Listing Card */}
-      <TableCard>
+      <TableCard accentColor="via-amber-500/30">
         {/* Toolbar */}
         <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
           <div className="relative w-full sm:w-80">
@@ -390,18 +342,16 @@ export default function UnitOrganisasiPage() {
 
             <div className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.08]" />
 
-            {/* Status filter */}
-            <div className="flex items-center gap-1">
-              {(['Semua', 'Aktif', 'Non-Aktif'] as const).map(s => (
-                <button
-                  key={s}
-                  onClick={() => setFilterStatus(s)}
-                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all cursor-pointer focus:outline-none ${filterStatus === s ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30' : 'text-slate-550 dark:text-slate-550 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'}`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            {/* Status filter — dropdown */}
+            <FilterDropdown<'Semua' | 'Aktif' | 'Non-Aktif'>
+              value={filterStatus}
+              onChange={setFilterStatus}
+              options={[
+                { label: 'Semua Status', value: 'Semua' },
+                { label: 'Aktif', value: 'Aktif' },
+                { label: 'Non-Aktif', value: 'Non-Aktif' },
+              ]}
+            />
           </div>
         </div>
 
@@ -575,40 +525,36 @@ export default function UnitOrganisasiPage() {
                 {/* Tipe Unit */}
                 <div>
                   <label className={labelCls}>Tipe Unit *</label>
-                  <div className="relative">
-                    <select
-                      value={form.tipe}
-                      onChange={e => {
-                        const val = e.target.value as TipeUnit;
-                        setForm(f => ({ ...f, tipe: val, parentId: '' }));
-                      }}
-                      className={`${inputCls} appearance-none pr-10 cursor-pointer`}
-                    >
-                      {Object.keys(TIPE_UNIT_LABELS).map(k => (
-                        <option key={k} value={k}>{TIPE_UNIT_LABELS[k as TipeUnit]}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                  </div>
+                  <SearchSelect
+                    options={tipeUnits.map(tu => ({
+                      value: tu.kode || tu.id,
+                      label: tu.label,
+                    }))}
+                    value={form.tipe}
+                    onChange={val => {
+                      setForm(f => ({ ...f, tipe: val as TipeUnit, parentId: '' }));
+                    }}
+                    placeholder="- Pilih Tipe Unit -"
+                  />
                 </div>
 
                 {/* Parent Unit */}
                 <div>
                   <label className={labelCls}>Parent Unit</label>
-                  <div className="relative">
-                    <select
-                      value={form.parentId}
-                      disabled={form.tipe === 'direktorat'}
-                      onChange={e => setForm(f => ({ ...f, parentId: e.target.value }))}
-                      className={`${inputCls} appearance-none pr-10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${errors.parentId ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
-                    >
-                      <option value="">- Tanpa Parent (Root) -</option>
-                      {parentOptions.map(p => (
-                        <option key={p.id} value={p.id}>{p.nama} ({TIPE_UNIT_LABELS[p.tipe]})</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                  </div>
+                  <SearchSelect
+                    disabled={form.tipe === 'direktorat'}
+                    options={[
+                      { value: '', label: '- Tanpa Parent (Root) -' },
+                      ...parentOptions.map(p => ({
+                        value: p.id,
+                        label: `${p.nama} (${TIPE_UNIT_LABELS[p.tipe] || p.tipe})`,
+                      }))
+                    ]}
+                    value={form.parentId}
+                    onChange={val => setForm(f => ({ ...f, parentId: val }))}
+                    placeholder="- Tanpa Parent (Root) -"
+                    error={!!errors.parentId}
+                  />
                   {errors.parentId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.parentId}</span>}
                 </div>
 
@@ -629,10 +575,10 @@ export default function UnitOrganisasiPage() {
 
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
                 <button disabled={saving} onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-550 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all cursor-pointer focus:outline-none">Batal</button>
-                <LiquidButton disabled={saving} variant="outline" size="sm" onClick={handleSave} className="cursor-pointer font-bold flex items-center gap-1.5">
-                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-550" />}
+                <PrimaryButton disabled={saving} onClick={handleSave} className="flex items-center gap-1.5">
+                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {editTarget ? 'Simpan' : 'Tambahkan'}
-                </LiquidButton>
+                </PrimaryButton>
               </div>
             </div>
           </div>
@@ -640,7 +586,18 @@ export default function UnitOrganisasiPage() {
       </ModalPortal>
 
       {/* Delete Confirmation Modal */}
-      <DeleteModal open={!!deleteTarget} name={deleteTarget?.nama ?? ''} onCancel={() => setDeleteTarget(null)} onConfirm={handleDelete} deleting={deleting} />
+      <DeleteConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        deleting={deleting}
+        title="Hapus Unit Organisasi?"
+        description={
+          <span>
+            Unit <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{deleteTarget?.nama}&quot;</span> beserta seluruh sub-unitnya akan dihapus permanen.
+          </span>
+        }
+      />
     </div>
   );
 }

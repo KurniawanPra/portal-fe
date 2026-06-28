@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  GitBranch, ChevronRight, ChevronDown, Loader2, Search, ZoomIn, ZoomOut, RefreshCw,
+  GitBranch, ChevronRight, ChevronDown, ChevronUp, Loader2, Search, ZoomIn, ZoomOut, RefreshCw,
   X, Download, User, Briefcase, Building2, Maximize2, Minimize2
 } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -202,6 +202,7 @@ function OrgTreeNode({
   employees,
   getGradeInfo,
 }: OrgTreeNodeProps) {
+  const [showPersonnel, setShowPersonnel] = useState(false);
   const config = TIPE_CONFIG[node.tipe];
   const hasChildren = node.children.length > 0;
 
@@ -387,12 +388,31 @@ function OrgTreeNode({
               <Briefcase className="h-3 w-3 text-slate-400 dark:text-slate-500" />
               {staffCount} Personil
             </span>
+            {subEmployeeGroups.length > 0 && node.tipe === 'seksi' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPersonnel(!showPersonnel);
+                }}
+                className="text-[9px] font-black text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 hover:underline flex items-center gap-0.5 cursor-pointer focus:outline-none"
+              >
+                {showPersonnel ? (
+                  <>
+                    Sembunyikan <ChevronUp className="h-3.5 w-3.5" />
+                  </>
+                ) : (
+                  <>
+                    Tampilkan ({unitEmployees.length - topEmployees.length}) <ChevronDown className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Sub-employee cards (same unit, lower grade) rendered as vertical children */}
-      {subEmployeeGroups.length > 0 && (
+      {subEmployeeGroups.length > 0 && (node.tipe !== 'seksi' || showPersonnel) && (
         <div className="flex flex-col items-center">
           {subEmployeeGroups.map((group) => (
             <div key={group.gradeInfo.kode || 'no-grade'} className="flex flex-col items-center">
@@ -1797,40 +1817,39 @@ export default function BaganOrganisasiPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
-            <GitBranch className="h-6 w-6 text-amber-500 dark:text-amber-400" />
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             Bagan Organisasi
           </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Visualisasi hierarki struktur organisasi PT Industri Nabati Lestari.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={downloadFullChartPDF} className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-650 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer focus:outline-none">
-            <Download className="h-3.5 w-3.5 text-amber-550 shrink-0" /> Cetak PDF Bagan
+          <button onClick={downloadFullChartPDF} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-slate-350 dark:hover:border-slate-750 transition-colors cursor-pointer focus:outline-none">
+            <Download className="h-3.5 w-3.5 text-amber-600 shrink-0" /> Cetak PDF Bagan
           </button>
-          <button onClick={fetchData} className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] px-3 py-2 text-xs font-bold text-slate-650 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer focus:outline-none">
+          <button onClick={fetchData} className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:border-slate-350 dark:hover:border-slate-750 transition-colors cursor-pointer focus:outline-none">
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </button>
         </div>
       </div>
 
       {/* Stats strip */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         <div className="flex items-center gap-2">
-          <GitBranch className="h-4 w-4 text-amber-500" />
-          <span className="text-sm font-black text-amber-500">{stats.total}</span>
-          <span className="text-xs font-bold text-slate-500">Total Unit</span>
+          <GitBranch className="h-4 w-4 text-amber-650 dark:text-amber-400" />
+          <span className="text-sm font-bold text-slate-850 dark:text-white">{stats.total}</span>
+          <span className="text-xs font-semibold text-slate-550 dark:text-slate-400">Total Unit</span>
         </div>
-        <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.1] shrink-0" />
+        <span className="h-4 w-px bg-slate-200 dark:bg-slate-850 shrink-0" />
         {(['direktorat', 'sevp', 'bagian', 'sub_bagian'] as TipeUnit[]).map((t, i, arr) => (
           <React.Fragment key={t}>
             <div className="flex items-center gap-2">
               <span className={`h-2 w-2 rounded-full ${TIPE_CONFIG[t].dot}`} />
-              <span className={`text-sm font-black ${TIPE_CONFIG[t].textColor}`}>{stats.byTipe[t]}</span>
-              <span className="text-xs font-bold text-slate-500">{TIPE_CONFIG[t].label}</span>
+              <span className="text-sm font-bold text-slate-850 dark:text-white">{stats.byTipe[t]}</span>
+              <span className="text-xs font-semibold text-slate-550 dark:text-slate-400">{TIPE_CONFIG[t].label}</span>
             </div>
-            {i < arr.length - 1 && <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.1] shrink-0" />}
+            {i < arr.length - 1 && <span className="h-4 w-px bg-slate-200 dark:bg-slate-850 shrink-0" />}
           </React.Fragment>
         ))}
       </div>

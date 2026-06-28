@@ -6,9 +6,9 @@ import {
   X, CheckCircle2, AlertCircle, Globe, Lock, Layers, ToggleLeft, ToggleRight, Loader2, ChevronDown
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
-import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { api, ApiRequestError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
+import { PrimaryButton, FilterDropdown } from '@/admin/master/components/shared';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AuthMode = 'sso' | 'independent';
@@ -264,48 +264,46 @@ export default function ManajemenAplikasiPage() {
       {/* ── Page Header ───────────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
-            <LayoutGrid className="h-6 w-6 text-amber-550 dark:text-amber-400" />
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             Manajemen Aplikasi
           </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-550 dark:text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Kelola aplikasi yang terintegrasi dengan Portal SSO PT INL.
           </p>
         </div>
-        <LiquidButton variant="outline" size="sm" onClick={openCreate} className="cursor-pointer flex items-center gap-2 font-bold">
+        <PrimaryButton onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Tambah Aplikasi
-        </LiquidButton>
+        </PrimaryButton>
       </div>
 
-      {/* ── Stat Strip — flat inline, no cards ─────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      {/* ── Stat Strip ────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label: 'Total Aplikasi', value: apps.length,              icon: Layers,      color: 'text-amber-500 dark:text-amber-400'   },
-          { label: 'Aktif',          value: totalActive,               icon: ToggleRight, color: 'text-emerald-500 dark:text-emerald-450' },
-          { label: 'Nonaktif',       value: apps.length - totalActive, icon: ToggleLeft,  color: 'text-rose-500 dark:text-rose-400'    },
-          { label: 'Pakai SSO',      value: apps.filter(a => a.auth_mode === 'sso').length, icon: Lock, color: 'text-indigo-500 dark:text-indigo-400' },
+          { label: 'Total Aplikasi', value: apps.length,              icon: Layers,      color: 'text-amber-600 dark:text-amber-400'   },
+          { label: 'Aktif',          value: totalActive,               icon: ToggleRight, color: 'text-emerald-650 dark:text-emerald-450' },
+          { label: 'Nonaktif',       value: apps.length - totalActive, icon: ToggleLeft,  color: 'text-rose-650 dark:text-rose-455'    },
+          { label: 'Pakai SSO',      value: apps.filter(a => a.auth_mode === 'sso').length, icon: Lock, color: 'text-indigo-650 dark:text-indigo-400' },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
             <React.Fragment key={s.label}>
               <div className="flex items-center gap-2">
                 <Icon className={`h-4 w-4 shrink-0 ${s.color}`} />
-                <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
-                <span className="text-xs font-bold text-slate-500">{s.label}</span>
+                <span className="text-sm font-bold text-slate-800 dark:text-white">{s.value}</span>
+                <span className="text-xs font-semibold text-slate-550 dark:text-slate-400">{s.label}</span>
               </div>
-              {i < arr.length - 1 && <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.1] shrink-0" />}
+              {i < arr.length - 1 && <span className="h-4 w-px bg-slate-200 dark:bg-slate-850 shrink-0" />}
             </React.Fragment>
           );
         })}
       </div>
 
       {/* ── Table Card ────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] shadow-lg">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
 
         {/* Toolbar */}
-        <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-855 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
             <input
@@ -316,21 +314,15 @@ export default function ManajemenAplikasiPage() {
               className={`${inputCls} pl-10`}
             />
           </div>
-          <div className="flex items-center gap-1.5">
-            {(['Semua', 'Aktif', 'Non-Aktif'] as const).map(f => (
-              <button
-                key={f}
-                onClick={() => setFilterActive(f)}
-                className={`rounded-lg px-3 py-1.5 text-[11px] font-black uppercase tracking-wide transition-all duration-150 cursor-pointer focus:outline-none ${
-                  filterActive === f
-                    ? 'bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 dark:border-amber-500/30'
-                    : 'text-slate-550 dark:text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 border border-transparent'
-                }`}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+          <FilterDropdown<'Semua' | 'Aktif' | 'Non-Aktif'>
+            value={filterActive}
+            onChange={setFilterActive}
+            options={[
+              { label: 'Semua Status', value: 'Semua' },
+              { label: 'Aktif', value: 'Aktif' },
+              { label: 'Non-Aktif', value: 'Non-Aktif' },
+            ]}
+          />
         </div>
 
         {/* Table */}
@@ -627,10 +619,10 @@ export default function ManajemenAplikasiPage() {
                   className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">
                   Batal
                 </button>
-                <LiquidButton disabled={saving} variant="outline" size="sm" onClick={handleSave} className="cursor-pointer font-bold flex items-center gap-1.5">
-                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-550" />}
+                <PrimaryButton disabled={saving} onClick={handleSave} className="flex items-center gap-1.5">
+                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {editTarget ? 'Simpan Perubahan' : 'Tambahkan'}
-                </LiquidButton>
+                </PrimaryButton>
               </div>
             </div>
           </div>

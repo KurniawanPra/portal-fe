@@ -1,0 +1,326 @@
+'use client';
+
+import React from 'react';
+import {
+  ToggleLeft, ToggleRight, Search, Plus, Loader2, X, ChevronDown
+} from 'lucide-react';
+import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
+import { ModalPortal } from '@/components/ui/ModalPortal';
+
+// ─── Shared Styles ────────────────────────────────────────────────────────────
+export const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-slate-450 dark:focus:border-slate-700 transition-colors duration-150';
+export const labelCls = 'mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400';
+
+// ─── Toast utility ────────────────────────────────────────────────────────────
+export function Toast({ toast }: { toast: { type: 'ok' | 'err'; text: string } | null }) {
+  if (!toast) return null;
+  return (
+    <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-lg backdrop-blur-xl animate-fade-up ${toast.type === 'ok' ? 'bg-emerald-50/10 border-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-rose-50/10 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
+      <span className="shrink-0 text-xs">
+        {toast.type === 'ok' ? '✓' : '⚠️'}
+      </span>
+      {toast.text}
+    </div>
+  );
+}
+
+// ─── Table Card shell ─────────────────────────────────────────────────────────
+export function TableCard({ children }: { accentColor?: string; children: React.ReactNode }) {
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+      {children}
+    </div>
+  );
+}
+
+// ─── Toggle Button ────────────────────────────────────────────────────────────
+export function ActiveToggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <button
+      disabled={disabled}
+      type="button"
+      onClick={() => onChange(!value)}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 cursor-pointer focus:outline-none disabled:opacity-50 ${value ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/15 hover:bg-emerald-100/40' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100'}`}
+    >
+      {value ? <ToggleRight className="h-3.5 w-3.5 text-emerald-650" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+      {value ? 'Aktif' : 'Nonaktif'}
+    </button>
+  );
+}
+
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+export function DeleteModal({ open, name, onCancel, onConfirm, deleting }: { open: boolean; name: string; onCancel: () => void; onConfirm: () => void; deleting?: boolean }) {
+  return (
+    <DeleteConfirmModal
+      isOpen={open}
+      onClose={onCancel}
+      onConfirm={onConfirm}
+      name={name}
+      deleting={deleting}
+    />
+  );
+}
+
+// ─── Crud Header Component ────────────────────────────────────────────────────
+export function CrudHeader({
+  searchPlaceholder,
+  searchValue,
+  onSearchChange,
+  addButtonText,
+  onAddClick,
+}: {
+  searchPlaceholder: string;
+  searchValue: string;
+  onSearchChange: (v: string) => void;
+  addButtonText?: string;
+  onAddClick?: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
+      <div className="relative w-full sm:w-72">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+        <input
+          type="text"
+          placeholder={searchPlaceholder}
+          value={searchValue}
+          onChange={e => onSearchChange(e.target.value)}
+          className={`${inputCls} pl-10`}
+        />
+      </div>
+      {addButtonText && onAddClick && (
+        <PrimaryButton onClick={onAddClick}>
+          <Plus className="h-4 w-4" /> {addButtonText}
+        </PrimaryButton>
+      )}
+    </div>
+  );
+}
+
+// ─── Primary Button ───────────────────────────────────────────────────────────
+/**
+ * Amber/yellow primary action button — use for all "Tambah" / main CTA buttons
+ * across admin pages (Organisasi, Employee, User, Aplikasi, Master Data).
+ */
+export function PrimaryButton({
+  onClick,
+  children,
+  disabled,
+  type = 'button',
+  className = '',
+}: {
+  onClick?: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  type?: 'button' | 'submit';
+  className?: string;
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 px-3.5 py-2 text-xs font-semibold text-white shadow-sm shadow-amber-500/25 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-500/30 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Filter Dropdown ──────────────────────────────────────────────────────────
+/**
+ * Compact filter dropdown (select) with ChevronDown icon overlay.
+ * Replaces inline button-group pill filters for status, gender, tipe, etc.
+ */
+export function FilterDropdown<T extends string>({
+  value,
+  onChange,
+  options,
+  className = '',
+}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { label: string; value: T }[];
+  className?: string;
+}) {
+  return (
+    <div className={`relative inline-flex items-center ${className}`}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value as T)}
+        className="appearance-none rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 cursor-pointer transition-all duration-150"
+      >
+        {options.map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+    </div>
+  );
+}
+
+// ─── Crud Table Component ─────────────────────────────────────────────────────
+export function CrudTable<T>({
+  headers,
+  loading,
+  loadingText = 'Memuat data...',
+  emptyText = 'Tidak ada data.',
+  data,
+  renderRow,
+}: {
+  headers: string[];
+  loading: boolean;
+  loadingText?: string;
+  emptyText?: string;
+  data: T[];
+  renderRow: (item: T, index: number) => React.ReactNode;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      {loading ? (
+        <div className="flex items-center justify-center py-20 gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+          <span className="text-sm font-semibold text-slate-400">{loadingText}</span>
+        </div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-150 dark:border-white/[0.04] bg-slate-50/20 dark:bg-white/[0.01]">
+              {headers.map((h, i) => (
+                <th
+                  key={h}
+                  className={`px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 ${
+                    i === headers.length - 1 ? 'text-right' : 'text-left'
+                  }`}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={headers.length} className="px-5 py-10 text-center text-sm font-semibold text-slate-400 dark:text-slate-500">
+                  {emptyText}
+                </td>
+              </tr>
+            ) : (
+              data.map((item, idx) => renderRow(item, idx))
+            )}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// ─── Crud Pagination Component ────────────────────────────────────────────────
+export function CrudPagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+}: {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: React.Dispatch<React.SetStateAction<number>>;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/20 dark:bg-white/[0.01]">
+      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-500">
+        Halaman {currentPage} dari {totalPages}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          disabled={currentPage === 1}
+          type="button"
+          onClick={() => onPageChange(p => Math.max(p - 1, 1))}
+          className="px-2.5 py-1.5 rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors text-[11px] font-semibold text-slate-600 dark:text-slate-400 cursor-pointer focus:outline-none"
+        >
+          Sebelumnya
+        </button>
+        <button
+          disabled={currentPage === totalPages}
+          type="button"
+          onClick={() => onPageChange(p => Math.min(p + 1, totalPages))}
+          className="px-2.5 py-1.5 rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors text-[11px] font-semibold text-slate-600 dark:text-slate-400 cursor-pointer focus:outline-none"
+        >
+          Selanjutnya
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Form Modal Component ─────────────────────────────────────────────────────
+export function FormModal({
+  open,
+  title,
+  onClose,
+  onSave,
+  saving,
+  icon: Icon,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  onSave: () => void | Promise<void>;
+  saving: boolean;
+  icon?: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
+  return (
+    <ModalPortal open={open}>
+      <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-[60]" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none z-[70]">
+        <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
+          <div className="relative overflow-hidden rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
+              <div className="flex items-center gap-2.5">
+                {Icon && (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                    <Icon className="h-4 w-4 text-slate-700 dark:text-slate-300" />
+                  </div>
+                )}
+                <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  {title}
+                </h2>
+              </div>
+              <button onClick={onClose} type="button" className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer focus:outline-none">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-5 space-y-4">
+              {children}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2.5 border-t border-slate-150 dark:border-white/[0.06] px-5 py-3.5 bg-slate-50/50 dark:bg-slate-950/30">
+              <button
+                disabled={saving}
+                type="button"
+                onClick={onClose}
+                className="rounded-lg border border-slate-200 dark:border-slate-800 px-4 py-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer focus:outline-none"
+              >
+                Batal
+              </button>
+              <button
+                disabled={saving}
+                type="button"
+                onClick={onSave}
+                className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 px-4 py-2 text-xs font-semibold text-white dark:text-slate-900 disabled:opacity-50 transition-colors"
+              >
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Simpan
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ModalPortal>
+  );
+}

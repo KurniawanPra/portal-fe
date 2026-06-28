@@ -2,59 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { Search, Bell, Calendar } from 'lucide-react';
+import { Search, Calendar } from 'lucide-react';
+import useSWR from 'swr';
+import { api } from '@/lib/api';
 import { ThemeTogglerButton } from '@/components/animate-ui/components/buttons/theme-toggler';
 import { SidebarTrigger } from '@/components/animate-ui/components/radix/sidebar';
-import NotificationModal, { type Notification } from './NotificationModal';
 
-// --- INITIAL MOCK NOTIFICATIONS (SSO / BUMN Corporate Alerts) ---
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: 'notif-1',
-    category: 'security',
-    title: 'Perangkat Baru Terdeteksi',
-    message:
-      'Akun Anda diakses dari perangkat baru: Chrome 125 di Windows 11 (Jakarta, ID). Jika bukan Anda, segera ganti kata sandi.',
-    timestamp: '2 menit lalu',
-    isRead: false,
-  },
-  {
-    id: 'notif-2',
-    category: 'warning',
-    title: 'Pemeliharaan Sistem Terjadwal',
-    message:
-      'Portal SSO akan menjalani pemeliharaan rutin pada Sabtu, 28 Juni 2026 pukul 23.00–01.00 WIB. Simpan pekerjaan Anda sebelum waktu tersebut.',
-    timestamp: '1 jam lalu',
-    isRead: false,
-  },
-  {
-    id: 'notif-3',
-    category: 'success',
-    title: 'Sinkronisasi Akun Berhasil',
-    message:
-      'Profil karyawan Anda telah berhasil disinkronkan dengan direktori HRIS PT INL. Data jabatan dan divisi kini sudah diperbarui.',
-    timestamp: '3 jam lalu',
-    isRead: false,
-  },
-  {
-    id: 'notif-4',
-    category: 'info',
-    title: 'Pembaruan Kebijakan Akses',
-    message:
-      'Kebijakan akses aplikasi Google Workspace telah diperbarui. Mulai 1 Juli 2026, autentikasi dua faktor (2FA) diwajibkan untuk semua karyawan.',
-    timestamp: 'Kemarin',
-    isRead: true,
-  },
-  {
-    id: 'notif-5',
-    category: 'security',
-    title: 'Sesi Login Aktif Terdeteksi',
-    message:
-      'Terdeteksi 2 sesi aktif pada akun Anda secara bersamaan. Klik untuk meninjau dan keluar dari sesi yang tidak dikenali.',
-    timestamp: 'Kemarin',
-    isRead: true,
-  },
-];
+
+// Notifications are loaded dynamically via SWR from /api/auth/notifications
 
 interface NavbarProps {
   employee: {
@@ -105,33 +60,7 @@ export default function Navbar({ employee }: NavbarProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Notification State ─────────────────────────────────────────
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
-
-  const handleToggleNotification = useCallback(() => {
-    setIsNotificationOpen((prev) => !prev);
-  }, []);
-
-  const handleCloseNotification = useCallback(() => {
-    setIsNotificationOpen(false);
-  }, []);
-
-  const handleToggleRead = useCallback((id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
-  }, []);
-
-  const handleMarkAllRead = useCallback(() => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-  }, []);
-
-  const handleClearAll = useCallback(() => {
-    setNotifications([]);
-  }, []);
 
   // ── Search Handler ─────────────────────────────────────────────
   const handleSearchChange = (value: string) => {
@@ -193,26 +122,7 @@ export default function Navbar({ employee }: NavbarProps) {
             {/* Dark Mode Toggle Button */}
             <ThemeTogglerButton variant="pill" size="md" modes={['light', 'dark', 'system']} />
 
-            {/* Notifications Bell — wrapper gives badge room to overflow outside the button */}
-            <div className="relative">
-              <button
-                id="notification-bell-btn"
-                type="button"
-                onClick={handleToggleNotification}
-                className="rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-slate-50/20 dark:bg-slate-950/20 p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-all duration-200 cursor-pointer focus:ring-2 focus:ring-slate-500/15 focus:outline-none"
-                aria-label="Notifikasi"
-                aria-expanded={isNotificationOpen}
-              >
-                <Bell className="h-5 w-5" />
-              </button>
 
-              {/* Unread Badge — floats outside button via wrapper's position:relative */}
-              {unreadCount > 0 && (
-                <span className="pointer-events-none absolute -top-2 -right-2 flex min-w-[1.25rem] h-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-black leading-none text-white ring-2 ring-white dark:ring-[#121620] transition-all duration-200">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </div>
 
             {/* Profile Summary */}
             <div className="flex items-center gap-2.5">
@@ -240,15 +150,7 @@ export default function Navbar({ employee }: NavbarProps) {
         </div>
       </header>
 
-      {/* ── Notification Modal ──────────────────────────────────────── */}
-      <NotificationModal
-        isOpen={isNotificationOpen}
-        onClose={handleCloseNotification}
-        notifications={notifications}
-        onMarkAllRead={handleMarkAllRead}
-        onClearAll={handleClearAll}
-        onToggleRead={handleToggleRead}
-      />
+
     </>
   );
 }

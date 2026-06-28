@@ -226,11 +226,17 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
     .sort((a, b) => a.urutan - b.urutan);
 
   const handleOpenApp = async (e: React.MouseEvent<HTMLAnchorElement>, app: Aplikasi) => {
+    e.preventDefault();
     if (app.auth_mode !== 'sso') {
-      // Allow default link navigation for independent apps
+      // Log access to independent app
+      try {
+        await api.post(`/apps/${app.id}/access`, {});
+      } catch (err) {
+        console.error('Gagal mencatat akses aplikasi:', err);
+      }
+      window.open(app.url, '_blank', 'noopener,noreferrer');
       return;
     }
-    e.preventDefault();
     try {
       const res = await api.get<{ token: string; redirectUrl: string }>(`/sso/token?app_id=${app.id}`);
       const token = res.data.token;

@@ -7,8 +7,8 @@ import {
   ShieldAlert, UserCog, ChevronDown, Loader2, Lock
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
-import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { api, ApiRequestError } from '@/lib/api';
+import { PrimaryButton } from '@/admin/master/components/shared';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Backend roles: 'user' | 'super_admin'
@@ -24,6 +24,8 @@ interface ApiUser {
   lastLogin: string | null;
   employeeId: string | null;
   createdAt: string;
+  totpEnabled: boolean;
+  passkeyCount: number;
 }
 
 interface EmployeeBrief {
@@ -48,6 +50,8 @@ interface UserData {
   jabatan: string;
   unitOrganisasi: string;
   fotoProfil?: string;
+  totpEnabled: boolean;
+  passkeyCount: number;
 }
 
 // ─── Role Mapping ─────────────────────────────────────────────────────────────
@@ -120,6 +124,9 @@ export default function ManajemenUserPage() {
   const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
   const [deleting,     setDeleting]     = useState(false);
   const [toast,        setToast]        = useState<{ type:'ok'|'err'; text:string } | null>(null);
+  const [reset2faTarget, setReset2faTarget] = useState<UserData | null>(null);
+  const [resetPasskeyTarget, setResetPasskeyTarget] = useState<UserData | null>(null);
+  const [resettingMfa, setResettingMfa] = useState(false);
 
   const showToast = (type: 'ok'|'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
 
@@ -151,6 +158,8 @@ export default function ManajemenUserPage() {
           jabatan: emp?.jabatan || '-',
           unitOrganisasi: '-',
           fotoProfil: emp?.fotoProfil || undefined,
+          totpEnabled: u.totpEnabled || false,
+          passkeyCount: Number(u.passkeyCount) || 0,
         };
       });
 
@@ -286,6 +295,40 @@ export default function ManajemenUserPage() {
     }
   }, [fetchUsers]);
 
+  // ─── Reset 2FA ─────────────────────────────────────────────────────────────
+  const handleReset2fa = useCallback(async () => {
+    if (!reset2faTarget) return;
+    setResettingMfa(true);
+    try {
+      await api.post(`/users/${reset2faTarget.id}/2fa/disable`, {});
+      showToast('ok', `2FA untuk "${reset2faTarget.email}" berhasil dinonaktifkan.`);
+      setReset2faTarget(null);
+      setLoading(true);
+      await fetchUsers();
+    } catch (err) {
+      showToast('err', err instanceof Error ? err.message : 'Gagal mereset 2FA.');
+    } finally {
+      setResettingMfa(false);
+    }
+  }, [reset2faTarget, fetchUsers]);
+
+  // ─── Reset Passkeys ────────────────────────────────────────────────────────
+  const handleResetPasskeys = useCallback(async () => {
+    if (!resetPasskeyTarget) return;
+    setResettingMfa(true);
+    try {
+      await api.delete(`/users/${resetPasskeyTarget.id}/passkeys`);
+      showToast('ok', `Semua passkey untuk "${resetPasskeyTarget.email}" berhasil dihapus.`);
+      setResetPasskeyTarget(null);
+      setLoading(true);
+      await fetchUsers();
+    } catch (err) {
+      showToast('err', err instanceof Error ? err.message : 'Gagal mereset Passkey.');
+    } finally {
+      setResettingMfa(false);
+    }
+  }, [resetPasskeyTarget, fetchUsers]);
+
   const fmtLogin = (s: string) => {
     if (s === '-') return '-';
     try { return new Date(s).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
@@ -310,43 +353,41 @@ export default function ManajemenUserPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-slate-100 flex items-center gap-2.5">
-            <Users className="h-6 w-6 text-amber-500 dark:text-amber-400" />
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
             Manajemen User
           </h1>
-          <p className="mt-1 text-sm font-semibold text-slate-550 dark:text-slate-400">Kelola pengguna dan hak akses Portal SSO PT INL.</p>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">Kelola pengguna dan hak akses Portal SSO PT INL.</p>
         </div>
-        <LiquidButton variant="outline" size="sm" onClick={openCreate} className="cursor-pointer flex items-center gap-2 font-bold">
+        <PrimaryButton onClick={openCreate}>
           <Plus className="h-4 w-4" />
           Tambah User
-        </LiquidButton>
+        </PrimaryButton>
       </div>
 
       {/* Stats — flat inline, no cards */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label:'Total User', value:users.length, icon:Users,       color:'text-amber-500 dark:text-amber-400'   },
-          { label:'Admin',      value:adminCount,   icon:ShieldCheck, color:'text-indigo-500 dark:text-indigo-400'  },
-          { label:'Aktif',      value:activeCount,  icon:UserCheck,   color:'text-emerald-500 dark:text-emerald-450' },
-          { label:'Suspended',  value:suspendCount, icon:ShieldAlert, color:'text-rose-500 dark:text-rose-405'    },
+          { label:'Total User', value:users.length, icon:Users,       color:'text-amber-600 dark:text-amber-400'   },
+          { label:'Admin',      value:adminCount,   icon:ShieldCheck, color:'text-indigo-650 dark:text-indigo-400'  },
+          { label:'Aktif',      value:activeCount,  icon:UserCheck,   color:'text-emerald-650 dark:text-emerald-450' },
+          { label:'Suspended',  value:suspendCount, icon:ShieldAlert, color:'text-rose-650 dark:text-rose-455'    },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
             <React.Fragment key={s.label}>
               <div className="flex items-center gap-2">
                 <Icon className={`h-4 w-4 shrink-0 ${s.color}`} />
-                <span className={`text-sm font-black ${s.color}`}>{s.value}</span>
-                <span className="text-xs font-bold text-slate-500">{s.label}</span>
+                <span className="text-sm font-bold text-slate-850 dark:text-white">{s.value}</span>
+                <span className="text-xs font-semibold text-slate-550 dark:text-slate-400">{s.label}</span>
               </div>
-              {i < arr.length - 1 && <span className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.1] shrink-0" />}
+              {i < arr.length - 1 && <span className="h-4 w-px bg-slate-200 dark:bg-slate-850 shrink-0" />}
             </React.Fragment>
           );
         })}
       </div>
 
       {/* Table Card */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] shadow-lg">
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
+      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
 
         {/* Toolbar */}
         <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
@@ -459,14 +500,14 @@ export default function ManajemenUserPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 dark:border-white/[0.04]">
-                {['User','NRK / Jabatan','Role','Status','Login Terakhir','Aksi'].map(h => (
+                {['User','NRK / Jabatan','Role','Status','MFA / Keamanan','Login Terakhir','Aksi'].map(h => (
                   <th key={h} className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 last:text-right">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
               {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="px-5 py-12 text-center text-sm font-semibold text-slate-455 dark:text-slate-500">Tidak ada user yang sesuai.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm font-semibold text-slate-455 dark:text-slate-500">Tidak ada user yang sesuai.</td></tr>
               ) : paginatedData.map(u => (
                 <tr key={u.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
                   {/* User */}
@@ -510,6 +551,43 @@ export default function ManajemenUserPage() {
                       <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[u.status]}`} />
                       {u.status}
                     </span>
+                  </td>
+                  {/* MFA / Keamanan */}
+                  <td className="px-5 py-3.5">
+                    <div className="flex flex-col gap-1.5 py-1">
+                      {u.totpEnabled ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20">
+                            MFA Aktif
+                          </span>
+                          <button
+                            onClick={() => setReset2faTarget(u)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white border border-rose-500/30 transition-all cursor-pointer focus:outline-none"
+                            title="Reset MFA (Nonaktifkan 2FA)"
+                          >
+                            Reset
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-650 uppercase">MFA Off</span>
+                      )}
+                      {u.passkeyCount > 0 ? (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-450 border border-indigo-500/20">
+                            Passkey ({u.passkeyCount})
+                          </span>
+                          <button
+                            onClick={() => setResetPasskeyTarget(u)}
+                            className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/15 hover:bg-rose-600 text-rose-600 dark:text-rose-400 hover:text-white border border-rose-500/30 transition-all cursor-pointer focus:outline-none"
+                            title="Hapus Semua Passkey"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-650 uppercase">Passkey Off</span>
+                      )}
+                    </div>
                   </td>
                   {/* Last Login */}
                   <td className="px-5 py-3.5 text-xs font-bold text-slate-550 dark:text-slate-500">{fmtLogin(u.last_login)}</td>
@@ -705,9 +783,9 @@ export default function ManajemenUserPage() {
               </div>
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
                 <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
-                <LiquidButton variant="outline" size="sm" onClick={handleSave} disabled={saving} className="cursor-pointer font-bold">
+                <PrimaryButton onClick={handleSave} disabled={saving}>
                   {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Menyimpan...</> : editTarget ? 'Simpan Perubahan' : 'Tambahkan'}
-                </LiquidButton>
+                </PrimaryButton>
               </div>
             </div>
           </div>
@@ -732,6 +810,56 @@ export default function ManajemenUserPage() {
                 <button onClick={() => setDeleteTarget(null)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
                 <button onClick={handleDelete} disabled={deleting} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-rose-500/20 disabled:opacity-50">
                   {deleting ? <><Loader2 className="h-4 w-4 animate-spin inline mr-1" /> Menghapus...</> : 'Hapus Sekarang'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ModalPortal>
+
+      {/* Reset 2FA Modal via Portal */}
+      <ModalPortal open={!!reset2faTarget}>
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setReset2faTarget(null)} />
+        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
+            <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <ShieldAlert className="h-6 w-6 text-rose-500 dark:text-rose-400" />
+              </div>
+              <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Reset MFA User?</h3>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Multi-Factor Authentication (MFA / 2FA) untuk user <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{reset2faTarget?.email}&quot;</span> akan dinonaktifkan. User dapat masuk hanya menggunakan password.
+              </p>
+              <div className="mt-5 flex gap-3">
+                <button onClick={() => setReset2faTarget(null)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
+                <button onClick={handleReset2fa} disabled={resettingMfa} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-xs font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-rose-500/20 disabled:opacity-50">
+                  {resettingMfa ? <><Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" /> Mereset...</> : 'Reset Sekarang'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ModalPortal>
+
+      {/* Reset Passkey Modal via Portal */}
+      <ModalPortal open={!!resetPasskeyTarget}>
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setResetPasskeyTarget(null)} />
+        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
+            <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <Trash2 className="h-6 w-6 text-rose-500 dark:text-rose-400" />
+              </div>
+              <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus Semua Passkey?</h3>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Semua perangkat Passkey yang terdaftar untuk user <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{resetPasskeyTarget?.email}&quot;</span> ({resetPasskeyTarget?.passkeyCount} perangkat) akan dihapus secara permanen.
+              </p>
+              <div className="mt-5 flex gap-3">
+                <button onClick={() => setResetPasskeyTarget(null)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
+                <button onClick={handleResetPasskeys} disabled={resettingMfa} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-xs font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-rose-500/20 disabled:opacity-50">
+                  {resettingMfa ? <><Loader2 className="h-3.5 w-3.5 animate-spin inline mr-1" /> Menghapus...</> : 'Hapus Sekarang'}
                 </button>
               </div>
             </div>

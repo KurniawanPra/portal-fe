@@ -8,7 +8,7 @@ export default function DashboardTemplate({
   children: React.ReactNode;
 }) {
   return (
-    <div className="animate-ios-page w-full h-full">
+    <div className="w-full h-full">
       {children}
     </div>
   );

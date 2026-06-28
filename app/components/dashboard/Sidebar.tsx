@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutGrid, User, ShieldAlert, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ModalPortal } from '@/components/ui/ModalPortal';
 import {
   Sidebar as RadixSidebar,
   SidebarHeader,
@@ -32,11 +33,12 @@ interface SidebarProps {
 export default function Sidebar({ employee, onLogout }: SidebarProps) {
   const pathname = usePathname();
   const { state } = useSidebar();
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
 
   const menuItems = [
-    { id: 'apps',     label: 'Aplikasi Saya',  path: '/dashboard/aplikasi', icon: LayoutGrid  },
-    { id: 'profile',  label: 'Profil Saya',    path: '/dashboard/profile',  icon: User        },
-    { id: 'security', label: 'Keamanan Akun',  path: '/dashboard/security', icon: ShieldAlert },
+    { id: 'apps', label: 'Aplikasi Saya', path: '/dashboard/aplikasi', icon: LayoutGrid },
+    { id: 'profile', label: 'Profil Saya', path: '/dashboard/profile', icon: User },
+    { id: 'security', label: 'Keamanan Akun', path: '/dashboard/security', icon: ShieldAlert },
   ];
 
   const renderMenuItem = (item: typeof menuItems[number]) => {
@@ -129,7 +131,7 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           </div>
 
           <button
-            onClick={onLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             className={cn(
               'rounded-lg p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-rose-500/10',
               state === 'collapsed' && 'mt-1'
@@ -140,6 +142,21 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           </button>
         </div>
       </SidebarFooter>
+
+      {/* Logout Confirmation Modal */}
+      <ModalPortal open={showLogoutConfirm}>
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
+        <div className="absolute inset-0 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm animate-fade-up bg-white dark:bg-[#0d1218] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-2xl p-6 text-center">
+            <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Keluar Portal?</h3>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Apakah Anda yakin ingin keluar dari sesi ini?</p>
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setShowLogoutConfirm(false)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04]">Batal</button>
+              <button onClick={onLogout} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-rose-500/20">Keluar Sekarang</button>
+            </div>
+          </div>
+        </div>
+      </ModalPortal>
     </RadixSidebar>
   );
 }
