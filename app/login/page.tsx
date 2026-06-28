@@ -71,6 +71,24 @@ export default function LoginPage() {
         .animate-soundwave-2 { animation: soundwave-2 0.7s ease-in-out infinite 0.1s; }
         .animate-soundwave-3 { animation: soundwave-3 0.9s ease-in-out infinite 0.2s; }
         .animate-soundwave-4 { animation: soundwave-4 0.6s ease-in-out infinite 0.15s; }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.25);
+          border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(156, 163, 175, 0.45);
+        }
+        .custom-scrollbar {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(156, 163, 175, 0.25) transparent;
+        }
       `}} />
 
       {/* Floating Top-Right Quick Actions */}
@@ -90,7 +108,7 @@ export default function LoginPage() {
       <div className="relative z-20 flex min-h-screen lg:h-full w-full flex-col lg:flex-row justify-between">
         {/* Left Side: Login Form (Flex layout to prevent overlapping) */}
         <div className={cn(
-          'w-full lg:w-[45%] min-h-screen lg:h-screen flex flex-col justify-between py-6 px-4 sm:p-8 md:p-10 lg:py-8 z-20 relative lg:overflow-y-auto',
+          'w-full lg:w-[45%] min-h-screen lg:h-screen flex flex-col justify-between py-6 px-4 sm:p-8 md:p-10 lg:py-8 z-20 relative lg:overflow-y-auto custom-scrollbar',
           'bg-white/5 dark:bg-slate-950/10 border-r border-white/5 dark:border-slate-800/10',
           // Lighter backdrop blur on low-end to save GPU memory bandwidth
           isLowEnd ? 'backdrop-blur-sm' : 'backdrop-filter backdrop-blur-[2px]',
