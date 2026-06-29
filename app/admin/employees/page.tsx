@@ -333,17 +333,18 @@ export default function ManajemenEmployeePage() {
     else if (form.nrk.trim().length < 7)        newErrors.nrk = 'NRK minimal harus 7 karakter.';
     if (!form.nik.trim())                       newErrors.nik = 'NIK wajib diisi.';
     else if (form.nik.length !== 16)            newErrors.nik = 'NIK harus 16 digit.';
+    if (!form.jenisKelamin)                     newErrors.jenisKelamin = 'Jenis Kelamin wajib diisi.';
     if (!form.jabatan.trim())                   newErrors.jabatan = 'Jabatan wajib diisi.';
     if (form.unitPath.length === 0)             newErrors.unitPath = 'Unit Organisasi wajib diisi.';
     if (!form.tempatLahir.trim())               newErrors.tempatLahir = 'Tempat Lahir wajib diisi.';
     if (!form.tanggalLahir)                     newErrors.tanggalLahir = 'Tanggal Lahir wajib diisi.';
     if (!form.tanggalMasuk)                     newErrors.tanggalMasuk = 'Tanggal Masuk wajib diisi.';
-    if (!form.nomorHp.trim())                   newErrors.nomorHp = 'Nomor HP wajib diisi.';
-    if (!form.alamat.trim())                    newErrors.alamat = 'Alamat wajib diisi.';
     if (!form.gradeId)                          newErrors.gradeId = 'Grade / Golongan wajib diisi.';
     if (!form.statusKaryawanId)                 newErrors.statusKaryawanId = 'Status Karyawan wajib diisi.';
     if (!form.pendidikanTerakhirId)             newErrors.pendidikanTerakhirId = 'Pendidikan Terakhir wajib diisi.';
     if (!form.statusPernikahanId)               newErrors.statusPernikahanId = 'Status Pernikahan wajib diisi.';
+    if (!form.nomorHp.trim())                   newErrors.nomorHp = 'Nomor HP wajib diisi.';
+    if (!form.alamat.trim())                    newErrors.alamat = 'Alamat wajib diisi.';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -665,17 +666,23 @@ export default function ManajemenEmployeePage() {
                 {/* Nama */}
                 <div>
                   <label className={labelCls}>Nama Lengkap *</label>
-                  <input type="text" value={form.nama} onChange={e => setForm(f=>({...f, nama:e.target.value}))} placeholder="cth: Budi Santoso, S.T." className={inputCls} />
+                  <input type="text" value={form.nama} onChange={e => setForm(f=>({...f, nama:e.target.value}))} placeholder="cth: Budi Santoso, S.T." 
+                    className={`${inputCls} ${errors.nama ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                  {errors.nama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nama}</span>}
                 </div>
                 {/* NRK & NIK */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>NRK *</label>
-                    <input type="text" value={form.nrk} onChange={e => setForm(f=>({...f, nrk:e.target.value}))} placeholder="NRK-XXXXXX" className={inputCls} />
+                    <input type="text" value={form.nrk} onChange={e => setForm(f=>({...f, nrk:e.target.value}))} placeholder="NRK-XXXXXX" 
+                      className={`${inputCls} ${errors.nrk ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    {errors.nrk && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nrk}</span>}
                   </div>
                   <div>
                     <label className={labelCls}>NIK (16 digit) *</label>
-                    <input type="text" value={form.nik} onChange={e => setForm(f=>({...f, nik:e.target.value.replace(/\D/g, '').slice(0, 16)}))} placeholder="320123456789xxxx" maxLength={16} className={inputCls} />
+                    <input type="text" value={form.nik} onChange={e => setForm(f=>({...f, nik:e.target.value.replace(/\D/g, '').slice(0, 16)}))} placeholder="320123456789xxxx" maxLength={16} 
+                      className={`${inputCls} ${errors.nik ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    {errors.nik && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nik}</span>}
                   </div>
                 </div>
                 {/* Jenis Kelamin & Jabatan */}
@@ -691,11 +698,15 @@ export default function ManajemenEmployeePage() {
                       value={form.jenisKelamin}
                       onChange={val => setForm(f => ({ ...f, jenisKelamin: val as JenisKelamin }))}
                       placeholder="- Pilih Gender -"
+                      error={!!errors.jenisKelamin}
                     />
+                    {errors.jenisKelamin && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.jenisKelamin}</span>}
                   </div>
                   <div>
                     <label className={labelCls}>Jabatan *</label>
-                    <input type="text" value={form.jabatan} onChange={e => setForm(f=>({...f, jabatan:e.target.value}))} placeholder="cth: IT Specialist" className={inputCls} />
+                    <input type="text" value={form.jabatan} onChange={e => setForm(f=>({...f, jabatan:e.target.value}))} placeholder="cth: IT Specialist" 
+                      className={`${inputCls} ${errors.jabatan ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    {errors.jabatan && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.jabatan}</span>}
                   </div>
                 </div>
 
@@ -723,7 +734,9 @@ export default function ManajemenEmployeePage() {
                       <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                       <div
                         onClick={() => setUnitDropdownOpen(o => !o)}
-                        className={`${inputCls} pl-10 pr-10 cursor-pointer flex items-center justify-between min-h-[42px]`}
+                        className={`${inputCls} pl-10 pr-10 cursor-pointer flex items-center justify-between min-h-[42px] ${
+                          errors.unitPath ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''
+                        }`}
                       >
                         {form.unitPath.length > 0 ? (
                           <span className="truncate text-slate-800 dark:text-slate-200">
@@ -734,10 +747,11 @@ export default function ManajemenEmployeePage() {
                             })()}
                           </span>
                         ) : (
-                          <span className="text-slate-400 dark:text-slate-500">- Pilih Unit Kerja -</span>
+                          <span className="text-slate-400 dark:text-slate-550">- Pilih Unit Kerja -</span>
                         )}
-                        <ChevronDown className="h-4.5 w-4.5 text-slate-400 dark:text-slate-500 transition-transform duration-200" />
+                        <ChevronDown className="h-4.5 w-4.5 text-slate-400 dark:text-slate-550 transition-transform duration-200" />
                       </div>
+                      {errors.unitPath && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.unitPath}</span>}
                     </div>
 
                     {/* Popover list */}
@@ -822,19 +836,25 @@ export default function ManajemenEmployeePage() {
                 {/* Tempat Lahir & Tanggal Lahir */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>Tempat Lahir</label>
-                    <input type="text" value={form.tempatLahir} onChange={e => setForm(f=>({...f, tempatLahir:e.target.value}))} placeholder="cth: Jakarta" className={inputCls} />
+                    <label className={labelCls}>Tempat Lahir *</label>
+                    <input type="text" value={form.tempatLahir} onChange={e => setForm(f=>({...f, tempatLahir:e.target.value}))} placeholder="cth: Jakarta" 
+                      className={`${inputCls} ${errors.tempatLahir ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    {errors.tempatLahir && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.tempatLahir}</span>}
                   </div>
                   <div>
-                    <label className={labelCls}>Tanggal Lahir</label>
-                    <input type="date" value={form.tanggalLahir} onChange={e => setForm(f=>({...f, tanggalLahir:e.target.value}))} className={inputCls} />
+                    <label className={labelCls}>Tanggal Lahir *</label>
+                    <input type="date" value={form.tanggalLahir} onChange={e => setForm(f=>({...f, tanggalLahir:e.target.value}))} 
+                      className={`${inputCls} ${errors.tanggalLahir ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    {errors.tanggalLahir && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.tanggalLahir}</span>}
                   </div>
                 </div>
                 {/* Tanggal Masuk & Status */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>Tanggal Masuk</label>
-                    <input type="date" value={form.tanggalMasuk} onChange={e => setForm(f=>({...f, tanggalMasuk:e.target.value}))} className={inputCls} />
+                    <label className={labelCls}>Tanggal Masuk *</label>
+                    <input type="date" value={form.tanggalMasuk} onChange={e => setForm(f=>({...f, tanggalMasuk:e.target.value}))} 
+                      className={`${inputCls} ${errors.tanggalMasuk ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    {errors.tanggalMasuk && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.tanggalMasuk}</span>}
                   </div>
                   <div>
                     <label className={labelCls}>Status</label>
@@ -966,21 +986,24 @@ export default function ManajemenEmployeePage() {
 
                 {/* Nomor HP */}
                 <div>
-                  <label className={labelCls}>Nomor HP</label>
+                  <label className={labelCls}>Nomor HP *</label>
                   <div className="relative z-0">
                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="tel" value={form.nomorHp} onChange={e => setForm(f=>({...f, nomorHp:e.target.value}))} placeholder="08xx-xxxx-xxxx" className={`${inputCls} pl-10`} />
+                    <input type="tel" value={form.nomorHp} onChange={e => setForm(f=>({...f, nomorHp:e.target.value}))} placeholder="08xx-xxxx-xxxx" 
+                      className={`${inputCls} pl-10 ${errors.nomorHp ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   </div>
+                  {errors.nomorHp && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nomorHp}</span>}
                 </div>
 
                 {/* Alamat */}
                 <div>
-                  <label className={labelCls}>Alamat</label>
+                  <label className={labelCls}>Alamat *</label>
                   <div className="relative z-0">
                     <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <textarea value={form.alamat} onChange={e => setForm(f=>({...f, alamat:e.target.value}))} placeholder="Alamat lengkap..." rows={4}
-                      className={`${inputCls} pl-10 resize-none`} />
+                      className={`${inputCls} pl-10 resize-none ${errors.alamat ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   </div>
+                  {errors.alamat && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.alamat}</span>}
                 </div>
 
                  {/* Foto Profil Upload */}

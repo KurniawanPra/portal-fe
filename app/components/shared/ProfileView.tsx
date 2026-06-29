@@ -69,9 +69,12 @@ export default function ProfileView({ isAdmin = false }: ProfileViewProps) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Gagal mengunggah foto.');
       }
-      // Reload profile to get new photo URL
-      const empRes = await api.get<any>(`/employees/${userMe!.employeeId}`);
-      setProfile(prev => prev ? { ...prev, fotoProfil: empRes.data?.fotoProfil || prev.fotoProfil } : prev);
+      // Reload profile to get new photo URL via /auth/me
+      const meRes = await api.get<any>('/auth/me');
+      const updatedMe = meRes.data;
+      if (updatedMe?.employee) {
+        setProfile(prev => prev ? { ...prev, fotoProfil: updatedMe.employee.fotoProfil || prev.fotoProfil } : prev);
+      }
       setPhotoToast('Foto profil berhasil diperbarui!');
       setTimeout(() => setPhotoToast(null), 3000);
     } catch (err: any) {

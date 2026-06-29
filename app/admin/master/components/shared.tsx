@@ -220,23 +220,48 @@ export function CrudPagination({
   if (totalPages <= 1) return null;
   return (
     <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/20 dark:bg-white/[0.01]">
-      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-500">
+      <span className="text-[10px] font-bold text-slate-555 dark:text-slate-400">
         Halaman {currentPage} dari {totalPages}
       </span>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <button
           disabled={currentPage === 1}
           type="button"
           onClick={() => onPageChange(p => Math.max(p - 1, 1))}
-          className="px-2.5 py-1.5 rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors text-[11px] font-semibold text-slate-600 dark:text-slate-400 cursor-pointer focus:outline-none"
+          className="px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-all text-[11px] font-bold text-slate-600 dark:text-slate-400 cursor-pointer focus:outline-none"
         >
           Sebelumnya
         </button>
+
+        {Array.from({ length: totalPages }, (_, i) => i + 1)
+          .filter(page => {
+            return page === 1 || page === totalPages || Math.abs(page - currentPage) <= 1;
+          })
+          .map((page, idx, arr) => {
+            const showEllipsis = idx > 0 && page - arr[idx - 1] > 1;
+            return (
+              <React.Fragment key={page}>
+                {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600 text-xs">...</span>}
+                <button
+                  type="button"
+                  onClick={() => onPageChange(page)}
+                  className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all cursor-pointer focus:outline-none ${
+                    currentPage === page
+                      ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
+                      : 'border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {page}
+                </button>
+              </React.Fragment>
+            );
+          })}
+
         <button
           disabled={currentPage === totalPages}
           type="button"
           onClick={() => onPageChange(p => Math.min(p + 1, totalPages))}
-          className="px-2.5 py-1.5 rounded-lg border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-colors text-[11px] font-semibold text-slate-600 dark:text-slate-400 cursor-pointer focus:outline-none"
+          className="px-2.5 py-1.5 rounded-lg border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-40 disabled:pointer-events-none transition-all text-[11px] font-bold text-slate-600 dark:text-slate-400 cursor-pointer focus:outline-none"
         >
           Selanjutnya
         </button>
