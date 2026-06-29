@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, Fingerprint } from 'lucide-react';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
@@ -63,6 +63,18 @@ export default function LoginCard() {
   const [step, setStep] = useState<'login' | 'totp'>('login');
   const [totpToken, setTotpToken] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState('');
+
+  useEffect(() => {
+    const isRemembered = localStorage.getItem('portal_remember') === 'true';
+    if (isRemembered) {
+      setEmail(localStorage.getItem('portal_email') || '');
+      setPassword(localStorage.getItem('portal_password') || '');
+      setRemember(true);
+    } else {
+      setRemember(false);
+    }
+  }, []);
+
 
   const handlePasskeyLogin = async () => {
     if (loading) return;
@@ -163,6 +175,16 @@ export default function LoginCard() {
         email,
         password,
       });
+
+      if (remember) {
+        localStorage.setItem('portal_remember', 'true');
+        localStorage.setItem('portal_email', email);
+        localStorage.setItem('portal_password', password);
+      } else {
+        localStorage.removeItem('portal_remember');
+        localStorage.removeItem('portal_email');
+        localStorage.removeItem('portal_password');
+      }
 
       if (res.data.requiresTotp) {
         setTotpToken(res.data.totpToken || null);
