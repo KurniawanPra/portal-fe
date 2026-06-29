@@ -716,6 +716,37 @@ export default function BaganOrganisasiPage() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
+  // Resizing sidebar state
+  const [sidebarWidth, setSidebarWidth] = useState(320);
+  const [isResizing, setIsResizing] = useState(false);
+
+  const startResizing = useCallback((mouseDownEvent: React.MouseEvent) => {
+    mouseDownEvent.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((mouseMoveEvent: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = mouseMoveEvent.clientX;
+      if (newWidth >= 240 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    window.addEventListener("mousemove", resize);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [resize, stopResizing]);
+
   // Reset zoom & pan when focus unit or fullscreen state changes to ensure the chart is visible and centered
   useEffect(() => {
     setZoom(1);
@@ -1644,10 +1675,15 @@ export default function BaganOrganisasiPage() {
         {/* Main Body Splitter */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left sub-sidebar (Scrollable tree navigation) */}
-          <div className="w-80 border-r border-slate-100 dark:border-white/[0.06] bg-slate-50/40 dark:bg-[#0c121e]/40 flex flex-col h-full shrink-0 select-none">
-
-            {/* Hierarchy scroll view */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin">
+          <div
+            style={{ width: `${sidebarWidth}px` }}
+            className="border-r border-slate-100 dark:border-white/[0.06] bg-slate-50/40 dark:bg-[#0c121e]/40 flex flex-col h-full shrink-0 select-none relative"
+          >
+            {/* Hierarchy scroll view with hidden scrollbar */}
+            <div
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              className="flex-1 overflow-y-auto p-2 space-y-1 no-scrollbar hide-scrollbar"
+            >
               {loading ? (
                 <div className="flex items-center justify-center py-10 gap-2">
                   <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
@@ -1669,6 +1705,12 @@ export default function BaganOrganisasiPage() {
                 ))
               )}
             </div>
+
+            {/* Col-Resize Drag Handle */}
+            <div
+              onMouseDown={startResizing}
+              className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-amber-500/30 active:bg-amber-500 transition-all z-30"
+            />
           </div>
 
           {/* Right canvas area */}

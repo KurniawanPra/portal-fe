@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { SearchSelect } from '@/components/ui/SearchSelect';
+import { cn } from '@/lib/utils';
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
 export const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-slate-450 dark:focus:border-slate-700 transition-colors duration-150';
@@ -126,11 +128,6 @@ export function PrimaryButton({
   );
 }
 
-// ─── Filter Dropdown ──────────────────────────────────────────────────────────
-/**
- * Compact filter dropdown (select) with ChevronDown icon overlay.
- * Replaces inline button-group pill filters for status, gender, tipe, etc.
- */
 export function FilterDropdown<T extends string>({
   value,
   onChange,
@@ -143,18 +140,14 @@ export function FilterDropdown<T extends string>({
   className?: string;
 }) {
   return (
-    <div className={`relative inline-flex items-center ${className}`}>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value as T)}
-        className="appearance-none rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-slate-900 pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 cursor-pointer transition-all duration-150"
-      >
-        {options.map(opt => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
-    </div>
+    <SearchSelect
+      searchable={false}
+      options={options.map(opt => ({ value: opt.value, label: opt.label }))}
+      value={value}
+      onChange={val => onChange(val as T)}
+      placeholder=""
+      className={cn("w-40", className)}
+    />
   );
 }
 
@@ -276,14 +269,15 @@ export function FormModal({
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none z-[70]">
         <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
           <div className="relative overflow-hidden rounded-xl border border-slate-205 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+            
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
               <div className="flex items-center gap-2.5">
-                {Icon && (
+                {/* {Icon && (
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
                     <Icon className="h-4 w-4 text-slate-700 dark:text-slate-300" />
                   </div>
-                )}
+                )} */}
                 <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                   {title}
                 </h2>

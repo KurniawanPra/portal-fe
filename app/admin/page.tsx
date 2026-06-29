@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
+import { CustomDateTimePicker } from '@/components/ui/CustomDateTimePicker';
 import {
   LayoutGrid, Users, Shield, TrendingUp, AlertTriangle,
   CheckCircle2, Activity, Zap, Lock, ChevronLeft, ChevronRight,
@@ -633,23 +634,19 @@ export default function AdminPage() {
               </div>
 
               {/* Range Date Picker */}
-              <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex flex-wrap items-center gap-3 text-xs">
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-bold text-slate-455 dark:text-slate-500">Mulai:</span>
-                  <input
-                    type="datetime-local"
+                  <CustomDateTimePicker
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 focus:outline-none focus:border-amber-500 dark:focus:border-amber-500 cursor-pointer"
+                    onChange={setStartDate}
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] font-bold text-slate-455 dark:text-slate-500">Sampai:</span>
-                  <input
-                    type="datetime-local"
+                  <CustomDateTimePicker
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="rounded-lg border border-slate-205 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-[11px] text-slate-700 dark:text-slate-300 focus:outline-none focus:border-amber-500 dark:focus:border-amber-500 cursor-pointer"
+                    onChange={setEndDate}
                   />
                 </div>
                 {(startDate || endDate || searchQuery) && (

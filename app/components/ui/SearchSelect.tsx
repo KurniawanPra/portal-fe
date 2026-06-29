@@ -70,7 +70,7 @@ export function SearchSelect({
   }, [isOpen]);
 
   return (
-    <div className={cn("relative w-full", className)} ref={ref}>
+    <div className={cn("relative w-full", isOpen ? "z-30" : "z-10", className)} ref={ref}>
       <style dangerouslySetInnerHTML={{
         __html: `
           .no-scrollbar::-webkit-scrollbar {

@@ -6,6 +6,7 @@ import {
   X, CheckCircle2, AlertCircle, Globe, Lock, Layers, ToggleLeft, ToggleRight, Loader2, ChevronDown
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { SearchSelect } from '@/components/ui/SearchSelect';
 import { api, ApiRequestError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { PrimaryButton, FilterDropdown } from '@/admin/master/components/shared';
@@ -40,7 +41,6 @@ interface ApiAplikasi {
 }
 
 const AUTH_MODES: AuthMode[] = ['sso', 'independent'];
-const KATEGORIS = ['Produktivitas', 'Komunikasi', 'Operasional', 'SDM', 'Media', 'Keuangan', 'Lainnya'];
 
 const AUTH_BADGE: Record<AuthMode, string> = {
   sso: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20',
@@ -48,7 +48,7 @@ const AUTH_BADGE: Record<AuthMode, string> = {
 };
 
 type FormData = Omit<Aplikasi, 'id' | 'dibuat_pada'>;
-const emptyForm: FormData = { nama: '', url: '', icon: '', auth_mode: 'sso', deskripsi: '', kategori: 'Produktivitas', is_active: true, urutan: 1 };
+const emptyForm: FormData = { nama: '', url: '', icon: '', auth_mode: 'sso', deskripsi: '', kategori: 'Lainnya', is_active: true, urutan: 1 };
 
 // ─── Shared Input styles ──────────────────────────────────────────────────────
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
@@ -56,6 +56,7 @@ const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest 
 
 export default function ManajemenAplikasiPage() {
   const [apps, setApps] = useState<Aplikasi[]>([]);
+  const [categories, setCategories] = useState<{ id: string; kode: string; label: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -73,7 +74,6 @@ export default function ManajemenAplikasiPage() {
   const [form, setForm] = useState<FormData>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [iconFile, setIconFile] = useState<File | null>(null);
-  const [customKategori, setCustomKategori] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Aplikasi | null>(null);
   const [toast, setToast] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -86,7 +86,10 @@ export default function ManajemenAplikasiPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const appsRes = await api.get<ApiAplikasi[]>('/apps?limit=200');
+      const [appsRes, catRes] = await Promise.all([
+        api.get<ApiAplikasi[]>('/apps?limit=200'),
+        api.get<{ id: string; kode: string; label: string }[]>('/master/kategori-aplikasi'),
+      ]);
       const mapped = (appsRes.data || []).map((app) => ({
         id: app.id,
         nama: app.nama,
@@ -100,6 +103,7 @@ export default function ManajemenAplikasiPage() {
         dibuat_pada: app.createdAt ? app.createdAt.slice(0, 10) : '-'
       }));
       setApps(mapped);
+      setCategories(catRes.data || []);
     } catch (err) {
       showToast('err', err instanceof Error ? err.message : 'Gagal memuat data aplikasi.');
     } finally {
@@ -127,7 +131,6 @@ export default function ManajemenAplikasiPage() {
     setEditTarget(null);
     setForm(emptyForm);
     setErrors({});
-    setCustomKategori('');
     setIconFile(null);
     setModalOpen(true);
   }, []);
@@ -135,18 +138,16 @@ export default function ManajemenAplikasiPage() {
   const openEdit = useCallback((app: Aplikasi) => {
     setEditTarget(app);
     setErrors({});
-    const isStandard = KATEGORIS.filter(k => k !== 'Lainnya').includes(app.kategori);
     setForm({
       nama: app.nama,
       url: app.url,
       icon: app.icon,
       auth_mode: app.auth_mode,
       deskripsi: app.deskripsi,
-      kategori: isStandard ? app.kategori : 'Lainnya',
+      kategori: app.kategori,
       is_active: app.is_active,
       urutan: app.urutan,
     });
-    setCustomKategori(isStandard ? '' : app.kategori);
     setIconFile(null);
     setModalOpen(true);
   }, []);
@@ -156,7 +157,7 @@ export default function ManajemenAplikasiPage() {
     if (!form.nama.trim()) { setErrors(e => ({ ...e, nama: 'Nama aplikasi wajib diisi.' })); showToast('err', 'Nama aplikasi wajib diisi.'); return; }
     if (!form.url.trim()) { setErrors(e => ({ ...e, url: 'URL aplikasi wajib diisi.' })); showToast('err', 'URL aplikasi wajib diisi.'); return; }
     
-    const finalKategori = form.kategori === 'Lainnya' ? customKategori.trim() : form.kategori;
+    const finalKategori = form.kategori.trim();
     if (!finalKategori) { setErrors(e => ({ ...e, kategori: 'Kategori wajib diisi.' })); showToast('err', 'Kategori wajib diisi.'); return; }
     
     if (!form.deskripsi.trim()) { setErrors(e => ({ ...e, deskripsi: 'Deskripsi wajib diisi.' })); showToast('err', 'Deskripsi wajib diisi.'); return; }
@@ -219,7 +220,7 @@ export default function ManajemenAplikasiPage() {
     } finally {
       setSaving(false);
     }
-  }, [form, editTarget, iconFile, customKategori, fetchData]);
+  }, [form, editTarget, iconFile, fetchData]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
@@ -273,7 +274,7 @@ export default function ManajemenAplikasiPage() {
             Kelola aplikasi yang terintegrasi dengan Portal SSO PT INL.
           </p>
         </div>
-        <PrimaryButton onClick={openCreate}>
+        <PrimaryButton onClick={openCreate} className="w-full justify-center sm:w-auto">
           <Plus className="h-4 w-4" />
           Tambah Aplikasi
         </PrimaryButton>
@@ -555,42 +556,28 @@ export default function ManajemenAplikasiPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Auth Mode</label>
-                    <div className="relative">
-                      <select value={form.auth_mode} onChange={e => setForm(f => ({ ...f, auth_mode: e.target.value as AuthMode }))}
-                        className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        {AUTH_MODES.map(m => (
-                          <option key={m} value={m} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
-                            {m === 'sso' ? 'SSO (Single Sign-On)' : 'Independent / Local'}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <SearchSelect
+                      searchable={false}
+                      options={[
+                        { value: 'sso', label: 'SSO (Single Sign-On)' },
+                        { value: 'independent', label: 'Independent / Local' }
+                      ]}
+                      value={form.auth_mode}
+                      onChange={val => setForm(f => ({ ...f, auth_mode: val as AuthMode }))}
+                      placeholder="- Pilih Auth Mode -"
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Kategori</label>
-                    <div className="relative">
-                      <select value={form.kategori} onChange={e => setForm(f => ({ ...f, kategori: e.target.value }))}
-                        className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        {KATEGORIS.map(k => <option key={k} value={k} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{k}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <SearchSelect
+                      searchable={true}
+                      options={categories.map(c => ({ value: c.label, label: c.label }))}
+                      value={form.kategori}
+                      onChange={val => setForm(f => ({ ...f, kategori: val }))}
+                      placeholder="- Pilih Kategori -"
+                    />
                   </div>
                 </div>
-                {form.kategori === 'Lainnya' && (
-                  <div className="animate-fade-in space-y-1">
-                    <label className={labelCls}>Kategori Kustom *</label>
-                    <input
-                      type="text"
-                      value={customKategori}
-                      onChange={e => setCustomKategori(e.target.value)}
-                      placeholder="Masukkan nama kategori kustom..."
-                      className={`${inputCls} ${errors.kategori ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
-                    />
-                    {errors.kategori && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.kategori}</span>}
-                  </div>
-                )}
                 <div>
                   <label className={labelCls}>Urutan Tampil</label>
                   <input type="number" min={1} value={form.urutan} onChange={e => setForm(f => ({ ...f, urutan: parseInt(e.target.value) || 1 }))} className={`${inputCls} ${errors.urutan ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />

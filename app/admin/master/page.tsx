@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Building2, Briefcase, GraduationCap, Heart, MapPin
+  Building2, Briefcase, GraduationCap, Heart, MapPin, Layers
 } from 'lucide-react';
 import TabStatusKaryawan from './components/TabStatusKaryawan';
 import TabGrade from './components/TabGrade';
@@ -10,6 +10,7 @@ import TabTipeUnit from './components/TabTipeUnit';
 import TabPendidikan from './components/TabPendidikan';
 import TabStatusNikah from './components/TabStatusNikah';
 import TabPenempatanArea from './components/TabPenempatanArea';
+import TabKategoriAplikasi from './components/TabKategoriAplikasi';
 
 // ─── TABS CONFIG ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -18,7 +19,7 @@ const TABS = [
     label: 'Status Karyawan',
     icon: Briefcase,
     accentText: 'text-slate-900 dark:text-white',
-    accentBg: 'bg-slate-50 dark:bg-slate-800',
+    accentBg: 'bg-slate-50 dark:bg-slate-805',
     Component: TabStatusKaryawan
   },
   {
@@ -60,6 +61,14 @@ const TABS = [
     accentText: 'text-slate-900 dark:text-white',
     accentBg: 'bg-slate-50 dark:bg-slate-800',
     Component: TabPenempatanArea
+  },
+  {
+    id: 'kategori-app',
+    label: 'Kategori Aplikasi',
+    icon: Layers,
+    accentText: 'text-slate-900 dark:text-white',
+    accentBg: 'bg-slate-50 dark:bg-slate-800',
+    Component: TabKategoriAplikasi
   },
 ];
 

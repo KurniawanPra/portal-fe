@@ -7,6 +7,7 @@ import {
   IdCard, Loader2, ChevronDown
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { SearchSelect } from '@/components/ui/SearchSelect';
 import { api } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { PrimaryButton, FilterDropdown, CrudPagination } from '@/admin/master/components/shared';
@@ -68,6 +69,7 @@ interface EmployeeData {
   pendidikanTerakhirId: string;
   statusPernikahanId: string;
   fotoProfil: string;
+  atasanId: string;
 }
 
 // Color palettes
@@ -121,6 +123,7 @@ interface FormData {
   statusKaryawanId: string;
   pendidikanTerakhirId: string;
   statusPernikahanId: string;
+  atasanId: string;
 }
 const emptyForm: FormData = {
   nrk: '', nik: '', nama: '', jenisKelamin: 'L', jabatan: '',
@@ -130,6 +133,7 @@ const emptyForm: FormData = {
   statusKaryawanId: '',
   pendidikanTerakhirId: '',
   statusPernikahanId: '',
+  atasanId: '',
 };
 
 export default function ManajemenEmployeePage() {
@@ -181,6 +185,20 @@ export default function ManajemenEmployeePage() {
       return matchSearch && (u.isActive || isSelected);
     });
   }, [unitOrganisasis, unitSearch, form.unitPath]);
+
+  const selectedGradeLevel = useMemo(() => {
+    const selectedGrade = grades.find(g => g.id === form.gradeId);
+    return selectedGrade ? selectedGrade.level : 0;
+  }, [form.gradeId, grades]);
+
+  const potentialAtasans = useMemo(() => {
+    if (!form.gradeId) return [];
+    return employees.filter(emp => {
+      if (editTarget && emp.id === editTarget.id) return false;
+      const empGrade = grades.find(g => g.id === emp.gradeId);
+      return empGrade && empGrade.level > selectedGradeLevel;
+    });
+  }, [form.gradeId, employees, grades, editTarget, selectedGradeLevel]);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeData | null>(null);
   const [toast,        setToast]        = useState<{ type:'ok'|'err'; text:string } | null>(null);
 
@@ -227,6 +245,7 @@ export default function ManajemenEmployeePage() {
         pendidikanTerakhirId: e.pendidikanTerakhirId || '',
         statusPernikahanId: e.statusPernikahanId || '',
         fotoProfil: e.fotoProfil || '',
+        atasanId: e.atasanId || '',
       }));
 
       setEmployees(mapped);
@@ -297,6 +316,7 @@ export default function ManajemenEmployeePage() {
       statusKaryawanId: e.statusKaryawanId,
       pendidikanTerakhirId: e.pendidikanTerakhirId,
       statusPernikahanId: e.statusPernikahanId,
+      atasanId: e.atasanId || '',
     });
     setUnitSearch('');
     setUnitDropdownOpen(false);
@@ -320,6 +340,10 @@ export default function ManajemenEmployeePage() {
     if (!form.tanggalMasuk)                     newErrors.tanggalMasuk = 'Tanggal Masuk wajib diisi.';
     if (!form.nomorHp.trim())                   newErrors.nomorHp = 'Nomor HP wajib diisi.';
     if (!form.alamat.trim())                    newErrors.alamat = 'Alamat wajib diisi.';
+    if (!form.gradeId)                          newErrors.gradeId = 'Grade / Golongan wajib diisi.';
+    if (!form.statusKaryawanId)                 newErrors.statusKaryawanId = 'Status Karyawan wajib diisi.';
+    if (!form.pendidikanTerakhirId)             newErrors.pendidikanTerakhirId = 'Pendidikan Terakhir wajib diisi.';
+    if (!form.statusPernikahanId)               newErrors.statusPernikahanId = 'Status Pernikahan wajib diisi.';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -349,6 +373,7 @@ export default function ManajemenEmployeePage() {
         statusKaryawanId: form.statusKaryawanId || null,
         pendidikanTerakhirId: form.pendidikanTerakhirId || null,
         statusPernikahanId: form.statusPernikahanId || null,
+        atasanId: form.atasanId || null,
       };
 
       let employeeId = '';
@@ -657,13 +682,16 @@ export default function ManajemenEmployeePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Jenis Kelamin *</label>
-                    <div className="relative">
-                      <select value={form.jenisKelamin} onChange={e => setForm(f=>({...f, jenisKelamin: e.target.value as JenisKelamin}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        <option value="L" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Laki-laki</option>
-                        <option value="P" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Perempuan</option>
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <SearchSelect
+                      searchable={false}
+                      options={[
+                        { value: 'L', label: 'Laki-laki' },
+                        { value: 'P', label: 'Perempuan' }
+                      ]}
+                      value={form.jenisKelamin}
+                      onChange={val => setForm(f => ({ ...f, jenisKelamin: val as JenisKelamin }))}
+                      placeholder="- Pilih Gender -"
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Jabatan *</label>
@@ -810,79 +838,93 @@ export default function ManajemenEmployeePage() {
                   </div>
                   <div>
                     <label className={labelCls}>Status</label>
-                    <div className="relative">
-                      <select value={form.isActive ? 'true' : 'false'} onChange={e => setForm(f=>({...f, isActive: e.target.value === 'true'}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        <option value="true" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Aktif</option>
-                        <option value="false" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">Non-Aktif</option>
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <SearchSelect
+                      searchable={false}
+                      options={[
+                        { value: 'true', label: 'Aktif' },
+                        { value: 'false', label: 'Non-Aktif' }
+                      ]}
+                      value={form.isActive ? 'true' : 'false'}
+                      onChange={val => setForm(f => ({ ...f, isActive: val === 'true' }))}
+                      placeholder="- Pilih Status -"
+                    />
                   </div>
                 </div>
 
                 {/* Grade & Status Karyawan */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>Grade / Golongan</label>
-                    <div className="relative">
-                      <select value={form.gradeId} onChange={e => setForm(f=>({...f, gradeId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        <option value="" className="text-slate-400">- Pilih Grade -</option>
-                        {grades.map(g => (
-                          <option key={g.id} value={g.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
-                            {g.kode} - {g.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <label className={labelCls}>Grade / Golongan *</label>
+                    <SearchSelect
+                      searchable={true}
+                      options={grades.map(g => ({ value: g.id, label: `${g.kode} - ${g.label}` }))}
+                      value={form.gradeId}
+                      onChange={val => setForm(f => ({ ...f, gradeId: val, atasanId: '' }))}
+                      placeholder="- Pilih Grade -"
+                      error={!!errors.gradeId}
+                    />
+                    {errors.gradeId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.gradeId}</span>}
                   </div>
                   <div>
-                    <label className={labelCls}>Status Karyawan</label>
-                    <div className="relative">
-                      <select value={form.statusKaryawanId} onChange={e => setForm(f=>({...f, statusKaryawanId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        <option value="" className="text-slate-400">- Pilih Status -</option>
-                        {statusKaryawans.map(s => (
-                          <option key={s.id} value={s.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <label className={labelCls}>Status Karyawan *</label>
+                    <SearchSelect
+                      searchable={true}
+                      options={statusKaryawans.map(s => ({ value: s.id, label: s.label }))}
+                      value={form.statusKaryawanId}
+                      onChange={val => setForm(f => ({ ...f, statusKaryawanId: val }))}
+                      placeholder="- Pilih Status -"
+                      error={!!errors.statusKaryawanId}
+                    />
+                    {errors.statusKaryawanId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.statusKaryawanId}</span>}
                   </div>
                 </div>
 
                 {/* Pendidikan & Status Pernikahan */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={labelCls}>Pendidikan Terakhir</label>
-                    <div className="relative">
-                      <select value={form.pendidikanTerakhirId} onChange={e => setForm(f=>({...f, pendidikanTerakhirId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        <option value="" className="text-slate-400">- Pilih Pendidikan -</option>
-                        {pendidikans.map(p => (
-                          <option key={p.id} value={p.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <label className={labelCls}>Pendidikan Terakhir *</label>
+                    <SearchSelect
+                      searchable={true}
+                      options={pendidikans.map(p => ({ value: p.id, label: p.label }))}
+                      value={form.pendidikanTerakhirId}
+                      onChange={val => setForm(f => ({ ...f, pendidikanTerakhirId: val }))}
+                      placeholder="- Pilih Pendidikan -"
+                      error={!!errors.pendidikanTerakhirId}
+                    />
+                    {errors.pendidikanTerakhirId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.pendidikanTerakhirId}</span>}
                   </div>
                   <div>
-                    <label className={labelCls}>Status Pernikahan</label>
-                    <div className="relative">
-                      <select value={form.statusPernikahanId} onChange={e => setForm(f=>({...f, statusPernikahanId: e.target.value}))} className={`${inputCls} appearance-none pr-10 cursor-pointer`}>
-                        <option value="" className="text-slate-400">- Pilih Status -</option>
-                        {statusPernikahans.map(m => (
-                          <option key={m.id} value={m.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">
-                            {m.label}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <label className={labelCls}>Status Pernikahan *</label>
+                    <SearchSelect
+                      searchable={true}
+                      options={statusPernikahans.map(m => ({ value: m.id, label: m.label }))}
+                      value={form.statusPernikahanId}
+                      onChange={val => setForm(f => ({ ...f, statusPernikahanId: val }))}
+                      placeholder="- Pilih Status -"
+                      error={!!errors.statusPernikahanId}
+                    />
+                    {errors.statusPernikahanId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.statusPernikahanId}</span>}
                   </div>
                 </div>
+
+                {/* Atasan Langsung */}
+                {form.gradeId && (
+                  <div className="animate-fade-in space-y-1 relative z-10">
+                    <label className={labelCls}>Atasan Langsung</label>
+                    <SearchSelect
+                      searchable={true}
+                      options={potentialAtasans.map(emp => ({
+                        value: emp.id,
+                        label: emp.nama,
+                        subLabel: `${emp.jabatan} (Grade: ${grades.find(g => g.id === emp.gradeId)?.kode || '-'})`,
+                      }))}
+                      value={form.atasanId}
+                      onChange={val => setForm(f => ({ ...f, atasanId: val }))}
+                      placeholder="- Pilih Atasan -"
+                      emptyText="Tidak ada karyawan dengan grade lebih tinggi"
+                    />
+                  </div>
+                )}
 
                 {/* Foto Profil Upload */}
                 {/* <div className="space-y-2">
@@ -925,7 +967,7 @@ export default function ManajemenEmployeePage() {
                 {/* Nomor HP */}
                 <div>
                   <label className={labelCls}>Nomor HP</label>
-                  <div className="relative">
+                  <div className="relative z-0">
                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <input type="tel" value={form.nomorHp} onChange={e => setForm(f=>({...f, nomorHp:e.target.value}))} placeholder="08xx-xxxx-xxxx" className={`${inputCls} pl-10`} />
                   </div>
@@ -934,7 +976,7 @@ export default function ManajemenEmployeePage() {
                 {/* Alamat */}
                 <div>
                   <label className={labelCls}>Alamat</label>
-                  <div className="relative">
+                  <div className="relative z-0">
                     <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                     <textarea value={form.alamat} onChange={e => setForm(f=>({...f, alamat:e.target.value}))} placeholder="Alamat lengkap..." rows={4}
                       className={`${inputCls} pl-10 resize-none`} />

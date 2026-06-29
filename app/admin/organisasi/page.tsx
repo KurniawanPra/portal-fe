@@ -326,19 +326,17 @@ export default function UnitOrganisasiPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Tipe filter */}
-            <div className="relative">
-              <select
-                value={filterType}
-                onChange={e => setFilterType(e.target.value as any)}
-                className="rounded-lg border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0a0f1a] px-3 py-1.5 pr-8 text-xs text-slate-700 dark:text-slate-300 outline-none focus:border-amber-500/50 cursor-pointer appearance-none"
-              >
-                <option value="Semua">Semua Tipe</option>
-                {Object.keys(TIPE_UNIT_LABELS).map(k => (
-                  <option key={k} value={k}>{TIPE_UNIT_LABELS[k as TipeUnit]}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
-            </div>
+            <FilterDropdown<'Semua' | TipeUnit>
+              value={filterType}
+              onChange={setFilterType}
+              options={[
+                { label: 'Semua Tipe', value: 'Semua' },
+                ...Object.keys(TIPE_UNIT_LABELS).map(k => ({
+                  label: TIPE_UNIT_LABELS[k as TipeUnit],
+                  value: k as TipeUnit,
+                })),
+              ]}
+            />
 
             <div className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.08]" />
 
