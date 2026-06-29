@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, Fingerprint } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound, Fingerprint, Mail, X } from 'lucide-react';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { Checkbox } from '@/components/animate-ui/components/headless/checkbox';
+import { ModalPortal } from '@/components/ui/ModalPortal';
 import { api } from '@/lib/api';
 import { saveTokens } from '@/lib/auth';
 
@@ -63,6 +64,37 @@ export default function LoginCard() {
   const [step, setStep] = useState<'login' | 'totp'>('login');
   const [totpToken, setTotpToken] = useState<string | null>(null);
   const [totpCode, setTotpCode] = useState('');
+
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      setForgotError('Email wajib diisi.');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(forgotEmail)) {
+      setForgotError('Format email tidak valid.');
+      return;
+    }
+    setForgotError(null);
+    setForgotLoading(true);
+    
+    try {
+      const res = await api.post<{ message: string }>('/auth/forgot-password', { email: forgotEmail });
+      setForgotModalOpen(false);
+      setMessage({ type: 'ok', text: res.data.message });
+      setForgotEmail('');
+    } catch (err: any) {
+      setForgotError(err.message || 'Gagal mengirim tautan reset password.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   useEffect(() => {
     const isRemembered = localStorage.getItem('portal_remember') === 'true';
@@ -363,7 +395,11 @@ export default function LoginCard() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => setMessage({ type: 'ok', text: 'Link reset password telah dikirim ke email Anda.' })}
+                  onClick={() => {
+                    setForgotEmail('');
+                    setForgotError(null);
+                    setForgotModalOpen(true);
+                  }}
                   className="text-xs font-bold text-brand dark:text-brand-dark transition-colors hover:text-brand-hover dark:hover:text-brand cursor-pointer focus:outline-none focus:underline"
                 >
                   Lupa password?
@@ -466,7 +502,7 @@ export default function LoginCard() {
         )}
 
         {/* Security Badge */}
-        <div className="login-card-security-badge mt-5 pt-1 flex items-center justify-center gap-1.5 text-[10px] text-slate-550 dark:text-slate-400">
+        <div className="login-card-security-badge mt-5 pt-1 flex items-center justify-center gap-1.5 text-[10px] text-slate-555 dark:text-slate-400">
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500" fill="none" stroke="currentColor" strokeWidth="2.5">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
@@ -474,6 +510,84 @@ export default function LoginCard() {
           <span className="font-semibold tracking-wide">Koneksi Terenkripsi & Aman</span>
         </div>
       </div>
+
+      {/* ── Lupa Password Modal — via Portal */}
+      <ModalPortal open={forgotModalOpen}>
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-[60]" onClick={() => setForgotModalOpen(false)} />
+        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none z-[70]">
+          <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
+            <form onSubmit={handleForgotSubmit} className="relative overflow-hidden rounded-3xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl p-6">
+              {/* Accent Line */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand to-transparent" />
+              
+              {/* Header */}
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2.5">
+                  {/* <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
+                    <Mail className="h-4 w-4 text-amber-550 dark:text-amber-455" />
+                  </div> */}
+                  <h3 className="text-sm font-black text-slate-800 dark:text-slate-100">Reset Password</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setForgotModalOpen(false)}
+                  className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-405 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-350 transition-all cursor-pointer focus:outline-none"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="mt-4 space-y-4">
+                <p className="text-xs font-bold leading-relaxed text-slate-600 dark:text-slate-400">
+                  Masukkan email akun portal Anda. Kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.
+                </p>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Alamat Email *</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="nama@email.com"
+                      className={`w-full rounded-xl border py-2.5 pl-10 pr-4 text-xs outline-none transition-all duration-200 text-slate-800 dark:text-slate-100 ${
+                        forgotError
+                          ? 'border-rose-500 bg-rose-500/[0.02] focus:border-rose-500 focus:ring-rose-500/10'
+                          : 'border-slate-200/80 dark:border-white/[0.06] bg-slate-50/50 dark:bg-[#070b12] focus:border-brand/50 focus:bg-white dark:focus:bg-[#0a0f1a]'
+                      }`}
+                      autoFocus
+                    />
+                  </div>
+                  {forgotError && (
+                    <span className="text-[10px] text-rose-500 mt-1 block font-bold">{forgotError}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-5 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForgotModalOpen(false)}
+                  disabled={forgotLoading}
+                  className="flex-1 rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2.5 text-xs font-bold text-slate-550 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="flex-1 rounded-xl bg-amber-500 hover:bg-amber-600 px-4 py-2.5 text-xs font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
+                >
+                  {forgotLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-white" />}
+                  {forgotLoading ? 'Mengirim...' : 'Kirim Tautan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </ModalPortal>
     </div>
   );
 }

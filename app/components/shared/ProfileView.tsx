@@ -275,7 +275,7 @@ export default function ProfileView({ isAdmin = false }: ProfileViewProps) {
               </h3>
               <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-2">
                 <div>
-                  <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">Email SSO</span>
+                  <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">Email</span>
                   <span className="mt-1 block text-sm font-semibold text-slate-900 dark:text-white">{userMe.email}</span>
                 </div>
                 <div>
@@ -406,7 +406,7 @@ export default function ProfileView({ isAdmin = false }: ProfileViewProps) {
               )}
               {userMe?.email && (
                 <div>
-                  <span className="block font-medium text-slate-500 dark:text-slate-400">Email SSO</span>
+                  <span className="block font-medium text-slate-500 dark:text-slate-400">Email</span>
                   <span className="mt-1 block text-sm font-semibold text-slate-900 dark:text-white">{userMe.email}</span>
                 </div>
               )}
