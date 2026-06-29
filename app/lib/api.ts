@@ -46,24 +46,35 @@ async function tryRefreshToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     const refreshToken = getRefreshToken();
-    if (!refreshToken) return false;
+    if (!refreshToken) {
+      console.warn('[Auth] Token refresh aborted: No refresh token found in localStorage.');
+      return false;
+    }
 
     try {
+      console.log('[Auth] Attempting token refresh...');
       const res = await fetch(`${BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
 
-      if (!res.ok) return false;
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`[Auth] Refresh request failed with status ${res.status}:`, errorText);
+        return false;
+      }
 
       const json = await res.json();
       if (json.success) {
+        console.log('[Auth] Token refresh successful. Saving new tokens.');
         saveTokens(json.data.accessToken, json.data.refreshToken);
         return true;
       }
+      console.warn('[Auth] Token refresh returned success=false:', json);
       return false;
-    } catch {
+    } catch (err) {
+      console.error('[Auth] Token refresh threw an exception:', err);
       return false;
     } finally {
       isRefreshing = false;
@@ -101,8 +112,10 @@ export async function apiFetch<T = unknown>(
   // If 401, try refresh token once
   if (res.status === 401) {
     if (token) {
+      console.warn(`[API] Request to "${endpoint}" returned 401. Attempting token refresh...`);
       const refreshed = await tryRefreshToken();
       if (refreshed) {
+        console.log(`[API] Refresh succeeded. Retrying request to "${endpoint}"...`);
         const newToken = getAccessToken();
         if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
         res = await fetch(url, { ...options, headers });
@@ -118,9 +131,15 @@ export async function apiFetch<T = unknown>(
           }
           return json as ApiResponse<T>;
         }
+        console.warn(`[API] Retried request to "${endpoint}" still returned 401.`);
+      } else {
+        console.error('[API] Token refresh failed.');
       }
+    } else {
+      console.warn(`[API] Request to "${endpoint}" returned 401, but no access token is available to refresh.`);
     }
 
+    console.error('[API] Session expired. Clearing tokens and redirecting to login.');
     clearTokens();
     if (typeof window !== 'undefined') {
       window.location.href = '/login';
