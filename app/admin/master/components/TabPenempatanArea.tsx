@@ -525,9 +525,9 @@ export default function TabPenempatanArea() {
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                  {/* <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
                     <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
+                  </div> */}
                   <div>
                     <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
                       Preview Area: {previewTarget?.nama}
