@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   LayoutGrid, Plus, Search, Pencil, Trash2, ExternalLink,
   X, CheckCircle2, AlertCircle, Globe, Lock, Layers, ToggleLeft, ToggleRight, Loader2, ChevronDown
@@ -24,6 +24,7 @@ interface Aplikasi {
   is_active: boolean;
   urutan: number;
   dibuat_pada: string;
+  roles: string;
 }
 
 interface ApiAplikasi {
@@ -36,6 +37,7 @@ interface ApiAplikasi {
   kategori?: string | null;
   urutan: number;
   isActive: boolean;
+  roles?: string | null;
   createdAt: string;
 }
 
@@ -48,7 +50,7 @@ const AUTH_BADGE: Record<AuthMode, string> = {
 };
 
 type FormData = Omit<Aplikasi, 'id' | 'dibuat_pada'>;
-const emptyForm: FormData = { nama: '', url: '', icon: '', auth_mode: 'sso', deskripsi: '', kategori: 'Produktivitas', is_active: true, urutan: 1 };
+const emptyForm: FormData = { nama: '', url: '', icon: '', auth_mode: 'sso', deskripsi: '', kategori: 'Produktivitas', is_active: true, urutan: 1, roles: 'STAFF' };
 
 // ─── Shared Input styles ──────────────────────────────────────────────────────
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
@@ -77,6 +79,22 @@ export default function ManajemenAplikasiPage() {
   const [deleteTarget, setDeleteTarget] = useState<Aplikasi | null>(null);
   const [toast, setToast] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
+  // Master Roles states
+  const [masterRoles, setMasterRoles] = useState<{ id: string; kode: string; label: string }[]>([]);
+  const [rolesSearch, setRolesSearch] = useState('');
+  const [rolesDropdownOpen, setRolesDropdownOpen] = useState(false);
+  const rolesDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (rolesDropdownRef.current && !rolesDropdownRef.current.contains(e.target as Node)) {
+        setRolesDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const showToast = (type: 'ok' | 'err', text: string) => {
     setToast({ type, text });
     setTimeout(() => setToast(null), 3200);
@@ -84,8 +102,11 @@ export default function ManajemenAplikasiPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await api.get<ApiAplikasi[]>('/apps?limit=200');
-      const mapped = (res.data || []).map((app) => ({
+      const [appsRes, rolesRes] = await Promise.all([
+        api.get<ApiAplikasi[]>('/apps?limit=200'),
+        api.get<{ id: string; kode: string; label: string }[]>('/master/role-aplikasi'),
+      ]);
+      const mapped = (appsRes.data || []).map((app) => ({
         id: app.id,
         nama: app.nama,
         url: app.url,
@@ -95,9 +116,11 @@ export default function ManajemenAplikasiPage() {
         deskripsi: app.deskripsi || '',
         urutan: app.urutan,
         is_active: app.isActive,
+        roles: app.roles || 'STAFF',
         dibuat_pada: app.createdAt ? app.createdAt.slice(0, 10) : '-'
       }));
       setApps(mapped);
+      setMasterRoles(rolesRes.data || []);
     } catch (err) {
       showToast('err', err instanceof Error ? err.message : 'Gagal memuat data aplikasi.');
     } finally {
@@ -142,7 +165,8 @@ export default function ManajemenAplikasiPage() {
       deskripsi: app.deskripsi,
       kategori: isStandard ? app.kategori : 'Lainnya',
       is_active: app.is_active,
-      urutan: app.urutan
+      urutan: app.urutan,
+      roles: app.roles || 'STAFF'
     });
     setCustomKategori(isStandard ? '' : app.kategori);
     setIconFile(null);
@@ -169,7 +193,8 @@ export default function ManajemenAplikasiPage() {
         kategori: finalKategori,
         deskripsi: form.deskripsi,
         urutan: form.urutan,
-        isActive: form.is_active
+        isActive: form.is_active,
+        roles: form.roles || 'STAFF'
       };
 
       let appId = '';
@@ -600,6 +625,94 @@ export default function ManajemenAplikasiPage() {
                     className={`${inputCls} resize-none ${errors.deskripsi ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   {errors.deskripsi && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.deskripsi}</span>}
                 </div>
+                {form.auth_mode === 'sso' && (
+                  <div className="relative" ref={rolesDropdownRef}>
+                    <label className={labelCls}>Role yang Tersedia pada Aplikasi *</label>
+                    <button
+                      type="button"
+                      onClick={() => setRolesDropdownOpen(!rolesDropdownOpen)}
+                      className={`${inputCls} flex items-center justify-between text-left py-2.5 cursor-pointer`}
+                    >
+                      <div className="flex flex-wrap gap-1.5 min-h-[20px] items-center">
+                        {form.roles
+                          ? form.roles.split(',').map(r => r.trim()).filter(Boolean).map(r => (
+                              <span key={r} className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-650 dark:text-amber-400 border border-amber-500/20">
+                                {r}
+                              </span>
+                            ))
+                          : <span className="text-slate-400 dark:text-slate-500 text-xs">Pilih Role Aplikasi...</span>
+                        }
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                    </button>
+
+                    {rolesDropdownOpen && (
+                      <div className="absolute left-0 right-0 mt-1.5 z-[999] rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d121c] p-2.5 shadow-[0_12px_30px_-6px_rgba(0,0,0,0.15)] dark:shadow-[0_12px_30px_-6px_rgba(0,0,0,0.5)] space-y-2 animate-scale-in">
+                        {/* Search Input */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                          <input
+                            type="text"
+                            placeholder="Cari role..."
+                            value={rolesSearch}
+                            onChange={e => setRolesSearch(e.target.value)}
+                            className="w-full rounded-lg border border-slate-100 dark:border-white/[0.04] bg-slate-50 dark:bg-[#070b13] pl-9 pr-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none placeholder:text-slate-400 focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/10 transition-all"
+                          />
+                        </div>
+
+                        {/* Options List */}
+                        <div className="max-h-[160px] overflow-y-auto space-y-1 pr-1.5 hide-scrollbar">
+                          {(() => {
+                            const currentRoles = form.roles
+                              ? form.roles.split(',').map(r => r.trim()).filter(Boolean)
+                              : [];
+                            const filteredRoles = masterRoles.filter(r =>
+                              r.kode.toLowerCase().includes(rolesSearch.toLowerCase()) ||
+                              r.label.toLowerCase().includes(rolesSearch.toLowerCase())
+                            );
+
+                            if (filteredRoles.length === 0) {
+                              return <p className="text-center text-[10px] text-slate-455 dark:text-slate-500 py-4">Role tidak ditemukan.</p>;
+                            }
+
+                            return filteredRoles.map(role => {
+                              const isChecked = currentRoles.includes(role.kode);
+                              return (
+                                <button
+                                  key={role.id}
+                                  type="button"
+                                  onClick={() => {
+                                    let nextRoles;
+                                    if (isChecked) {
+                                      nextRoles = currentRoles.filter(r => r !== role.kode);
+                                    } else {
+                                      nextRoles = [...currentRoles, role.kode];
+                                    }
+                                    setForm(f => ({ ...f, roles: nextRoles.join(',') }));
+                                  }}
+                                  className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-xs font-bold transition-all cursor-pointer text-left ${
+                                    isChecked
+                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                      : 'text-slate-650 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.02]'
+                                  }`}
+                                >
+                                  <div className="flex flex-col">
+                                    <span>{role.kode}</span>
+                                    <span className="text-[9px] font-medium text-slate-455 dark:text-slate-500 mt-0.5">{role.label}</span>
+                                  </div>
+                                  {isChecked && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                                </button>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    )}
+                    <p className="mt-1 text-[10px] text-slate-455 dark:text-slate-500">
+                      Pilih role yang terdaftar di master data untuk diaktifkan pada aplikasi SSO ini.
+                    </p>
+                  </div>
+                )}
                 {/* Toggle status */}
                 <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-white/[0.06] bg-slate-50 dark:bg-white/[0.03] px-4 py-3">
                   <div>

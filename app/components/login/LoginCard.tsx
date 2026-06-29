@@ -68,10 +68,9 @@ export default function LoginCard() {
     if (loading) return;
     setMessage(null);
     setLoading(true);
-
     try {
       // 1. Get options from backend
-      const optionsRes = await api.post<any>('/auth/passkey/login/options', {});
+      const optionsRes = await api.post<any>('/auth/passkey/login/options', { email });
       const { options, challengeToken } = optionsRes.data;
 
       // 2. Convert options challenge to Uint8Array

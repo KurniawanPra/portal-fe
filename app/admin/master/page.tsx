@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Building2, Briefcase, GraduationCap, Heart, MapPin
+  Building2, Briefcase, GraduationCap, Heart, MapPin, Layers
 } from 'lucide-react';
 import TabStatusKaryawan from './components/TabStatusKaryawan';
 import TabGrade from './components/TabGrade';
@@ -10,6 +10,7 @@ import TabTipeUnit from './components/TabTipeUnit';
 import TabPendidikan from './components/TabPendidikan';
 import TabStatusNikah from './components/TabStatusNikah';
 import TabPenempatanArea from './components/TabPenempatanArea';
+import TabRoleAplikasi from './components/TabRoleAplikasi';
 
 // ─── TABS CONFIG ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -60,6 +61,14 @@ const TABS = [
     accentText: 'text-slate-900 dark:text-white',
     accentBg: 'bg-slate-50 dark:bg-slate-800',
     Component: TabPenempatanArea
+  },
+  {
+    id: 'role-aplikasi',
+    label: 'Role Aplikasi',
+    icon: Layers,
+    accentText: 'text-slate-900 dark:text-white',
+    accentBg: 'bg-slate-50 dark:bg-slate-800',
+    Component: TabRoleAplikasi
   },
 ];
 
