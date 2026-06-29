@@ -133,7 +133,19 @@ export async function apiFetch<T = unknown>(
     return { success: true, data: null as T };
   }
 
-  const json = await res.json();
+  let json: any;
+  try {
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      throw new Error(`Server returned status ${res.status}`);
+    }
+    json = await res.json();
+  } catch (parseErr: any) {
+    throw new Error(parseErr.message?.startsWith('Server returned') 
+      ? `Terjadi kesalahan pada server (Status: ${res.status}).`
+      : 'Gagal menghubungi server. Silakan coba beberapa saat lagi.'
+    );
+  }
 
   if (!json.success) {
     const apiErr = json as ApiError;
