@@ -45,6 +45,7 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
       label: 'Navigasi Utama',
       items: [
         { id: 'overview', label: 'Overview', path: '/admin', icon: Home },
+        { id: 'aplikasi_portal', label: 'Portal Aplikasi', path: '/admin/aplikasi-portal', icon: LayoutGrid },
       ]
     },
     {
@@ -74,7 +75,7 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
       'Kelola Sistem': false,
       'Akun Saya': false,
     };
-    if (pathname === '/admin') {
+    if (pathname === '/admin' || pathname?.startsWith('/admin/aplikasi-portal')) {
       initial['Navigasi Utama'] = true;
     } else if (
       pathname.startsWith('/admin/master') ||
@@ -96,7 +97,7 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
 
   // Automatically open group when route changes
   React.useEffect(() => {
-    if (pathname === '/admin') {
+    if (pathname === '/admin' || pathname?.startsWith('/admin/aplikasi-portal')) {
       setOpenGroups(prev => ({ ...prev, 'Navigasi Utama': true }));
     } else if (
       pathname.startsWith('/admin/master') ||
