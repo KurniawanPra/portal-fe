@@ -7,7 +7,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
     return [
       {
         source: '/api/:path*',
@@ -27,7 +27,7 @@ const nextConfig = {
         fs: false,
         path: false,
       };
-      
+
       // Strip 'node:' prefix for client-side imports (e.g. node:fs -> fs)
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
