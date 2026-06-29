@@ -355,8 +355,8 @@ function OrgTreeNode({
                           onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                       ) : (
-                        <div className={`h-6 w-6 rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-                          <span className="text-[8px] font-black text-white">{initials}</span>
+                        <div className="h-6 w-6 rounded-full bg-slate-100 dark:bg-slate-800/85 text-slate-400 dark:text-slate-500 border border-slate-205/50 dark:border-white/[0.04] flex items-center justify-center shadow-sm">
+                          <User className="h-3 w-3" />
                         </div>
                       )}
                     </div>
@@ -2027,8 +2027,8 @@ export default function BaganOrganisasiPage() {
                                       className="h-10 w-10 rounded-full object-cover shrink-0 border border-slate-100 dark:border-white/[0.08]"
                                     />
                                   ) : (
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-600 font-black text-sm text-white">
-                                      {emp.nama.charAt(0).toUpperCase()}
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/85 text-slate-400 dark:text-slate-500 border border-slate-205/50 dark:border-white/[0.04] shadow-sm">
+                                      <User className="h-5 w-5" />
                                     </div>
                                   )}
                                   <div className="min-w-0 flex-1">

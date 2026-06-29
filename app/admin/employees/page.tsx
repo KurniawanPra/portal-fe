@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Phone, MapPin, Briefcase, Building2, UserCheck, UserX,
-  IdCard, Loader2, ChevronDown
+  IdCard, Loader2, ChevronDown, User
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect } from '@/components/ui/SearchSelect';
@@ -567,8 +567,8 @@ export default function ManajemenEmployeePage() {
                           className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]" 
                         />
                       ) : (
-                        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-black text-sm text-white bg-gradient-to-br ${GENDER_AVATAR[e.jenisKelamin]}`}>
-                          {e.nama.charAt(0)}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800/85 text-slate-400 dark:text-slate-500 border border-slate-205/50 dark:border-white/[0.04] shadow-sm">
+                          <User className="h-4 w-4" />
                         </div>
                       )}
                       <div className="min-w-0">

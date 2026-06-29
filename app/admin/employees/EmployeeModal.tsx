@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { X, Building2, Pencil, Plus, Loader2 } from 'lucide-react';
+import { X, Building2, Pencil, Plus, Loader2, User } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
@@ -345,8 +345,8 @@ export function EmployeeModal({
                         className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-white/[0.08]"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 font-bold text-xl">
-                        ?
+                      <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200/50 dark:border-white/[0.04] shadow-sm">
+                        <User className="h-6 w-6" />
                       </div>
                     )}
                   </div>
