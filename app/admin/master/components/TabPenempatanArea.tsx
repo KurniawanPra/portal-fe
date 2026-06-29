@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  MapPin, Pencil, Trash2, Layers, Search, Loader2, X
+  MapPin, Pencil, Trash2, Layers, Search, Loader2, X, Eye, ExternalLink
 } from 'lucide-react';
 import { Map, Marker } from 'pigeon-maps';
 import { ModalPortal } from '@/components/ui/ModalPortal';
@@ -12,8 +12,12 @@ import {
   CrudHeader, CrudTable, CrudPagination, FormModal
 } from './shared';
 
-const esriProvider = (x: number, y: number, z: number) => {
-  return `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+const googleRoadProvider = (x: number, y: number, z: number) => {
+  return `https://mt1.google.com/vt/lyrs=m&x=${x}&y=${y}&z=${z}`;
+};
+
+const googleSatelliteProvider = (x: number, y: number, z: number) => {
+  return `https://mt1.google.com/vt/lyrs=y&x=${x}&y=${y}&z=${z}`;
 };
 
 interface PenempatanArea {
@@ -40,6 +44,8 @@ export default function TabPenempatanArea() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<PenempatanArea | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<PenempatanArea | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<PenempatanArea | null>(null);
+  const [previewMode3D, setPreviewMode3D] = useState(true);
   const [form, setForm] = useState({ nama: '', longitude: '', latitude: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -136,25 +142,29 @@ export default function TabPenempatanArea() {
     setSearchingMap(true);
     setSearchError('');
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`);
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+      if (!apiKey) {
+        setSearchError('Google Maps API Key tidak ditemukan di konfigurasi.');
+        setSearchingMap(false);
+        return;
+      }
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`);
       const data = await res.json();
-      if (data && data.length > 0) {
-        const item = data[0];
-        const lat = parseFloat(item.lat);
-        const lng = parseFloat(item.lon);
-        if (!isNaN(lat) && !isNaN(lng)) {
-          setForm(f => ({
-            ...f,
-            latitude: lat.toFixed(6),
-            longitude: lng.toFixed(6)
-          }));
-          setMapCenter([lat, lng]);
-          setMapZoom(14);
-        } else {
-          setSearchError('Koordinat tidak valid.');
-        }
-      } else {
+      if (data.status === 'OK' && data.results && data.results.length > 0) {
+        const item = data.results[0];
+        const lat = item.geometry.location.lat;
+        const lng = item.geometry.location.lng;
+        setForm(f => ({
+          ...f,
+          latitude: lat.toFixed(6),
+          longitude: lng.toFixed(6)
+        }));
+        setMapCenter([lat, lng]);
+        setMapZoom(14);
+      } else if (data.status === 'ZERO_RESULTS') {
         setSearchError('Lokasi tidak ditemukan.');
+      } else {
+        setSearchError(data.error_message || `Gagal mencari lokasi (Status: ${data.status})`);
       }
     } catch (err) {
       console.error('Gagal mencari lokasi:', err);
@@ -285,6 +295,17 @@ export default function TabPenempatanArea() {
               </td>
               <td className="px-5 py-3.5">
                 <div className="flex items-center justify-end gap-1">
+                  <button
+                    onClick={() => {
+                      setPreviewTarget(row);
+                      setPreviewMode3D(true);
+                    }}
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-blue-500/10 hover:text-blue-500 transition-colors cursor-pointer focus:outline-none"
+                    title="Preview Lokasi"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
                   <button
                     onClick={() => openEdit(row)}
                     type="button"
@@ -428,7 +449,7 @@ export default function TabPenempatanArea() {
                     height={320}
                     center={mapCenter}
                     zoom={mapZoom}
-                    provider={mapMode3D ? esriProvider : undefined}
+                    provider={mapMode3D ? googleSatelliteProvider : googleRoadProvider}
                     onClick={handleMapClick}
                     onBoundsChanged={({ center, zoom }) => {
                       setMapCenter(center);
@@ -488,6 +509,88 @@ export default function TabPenempatanArea() {
                   className="rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 px-5 py-2 text-xs font-semibold text-white dark:text-slate-900 transition-colors cursor-pointer focus:outline-none"
                 >
                   Selesai & Terapkan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ModalPortal>
+
+      {/* Preview Map Modal */}
+      <ModalPortal open={!!previewTarget}>
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm z-[60]" onClick={() => setPreviewTarget(null)} />
+        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none z-[70]">
+          <div className="pointer-events-auto w-full max-w-xl animate-fade-up">
+            <div className="relative overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <MapPin className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      Preview Area: {previewTarget?.nama}
+                    </h2>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                      Lat: {previewTarget?.latitude}, Lng: {previewTarget?.longitude}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setPreviewTarget(null)} type="button" className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer focus:outline-none">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5">
+                <div className="w-full h-[350px] rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 relative z-10">
+                  {previewTarget && (
+                    <Map
+                      height={350}
+                      center={[parseFloat(previewTarget.latitude), parseFloat(previewTarget.longitude)]}
+                      zoom={15}
+                      provider={previewMode3D ? googleSatelliteProvider : googleRoadProvider}
+                    >
+                      <Marker
+                        width={32}
+                        anchor={[parseFloat(previewTarget.latitude), parseFloat(previewTarget.longitude)]}
+                        color="#ef4444"
+                      />
+                    </Map>
+                  )}
+                  
+                  {/* Mode 3D Toggle Overlay Button */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode3D(!previewMode3D)}
+                    className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus:outline-none cursor-pointer"
+                    title={previewMode3D ? "Ubah ke Peta 2D Jalan" : "Ubah ke Peta Satelit 3D"}
+                  >
+                    <Layers className={`h-4 w-4 ${previewMode3D ? 'text-indigo-650' : 'text-slate-500'}`} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between border-t border-slate-150 dark:border-white/[0.06] px-5 py-3.5 bg-slate-50/50 dark:bg-slate-950/30">
+                {previewTarget && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${previewTarget.latitude},${previewTarget.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 focus:outline-none"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Buka di Google Maps
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPreviewTarget(null)}
+                  className="rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 px-5 py-2 text-xs font-semibold text-white dark:text-slate-900 transition-colors cursor-pointer focus:outline-none"
+                >
+                  Tutup
                 </button>
               </div>
             </div>
