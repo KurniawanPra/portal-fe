@@ -12,6 +12,7 @@ import {
 
 interface StatusNikah {
   id: string;
+  kode: string;
   nama: string;
 }
 
@@ -31,7 +32,7 @@ export default function TabStatusNikah() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<StatusNikah | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<StatusNikah | null>(null);
-  const [form, setForm] = useState({ nama: '' });
+  const [form, setForm] = useState({ kode: '', nama: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -51,6 +52,7 @@ export default function TabStatusNikah() {
       const res = await api.get<ApiStatusPernikahan[]>('/master/status-pernikahan');
       const mapped = (res.data || []).map(r => ({
         id: r.id,
+        kode: r.kode,
         nama: r.label,
       }));
       setData(mapped);
@@ -67,14 +69,14 @@ export default function TabStatusNikah() {
 
   const openCreate = () => {
     setEditTarget(null);
-    setForm({ nama: '' });
+    setForm({ kode: '', nama: '' });
     setErrors({});
     setModalOpen(true);
   };
 
   const openEdit = (r: StatusNikah) => {
     setEditTarget(r);
-    setForm({ nama: r.nama });
+    setForm({ kode: r.kode || '', nama: r.nama });
     setErrors({});
     setModalOpen(true);
   };
@@ -82,6 +84,7 @@ export default function TabStatusNikah() {
   const handleSave = async () => {
     setErrors({});
     const newErrors: Record<string, string> = {};
+    if (!form.kode.trim()) { newErrors.kode = 'Kode Status wajib diisi.'; }
     if (!form.nama.trim()) { newErrors.nama = 'Nama Status wajib diisi.'; }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -92,7 +95,7 @@ export default function TabStatusNikah() {
     setSaving(true);
     try {
       const payload = {
-        kode: form.nama.toUpperCase().replace(/[^A-Z0-9]/g, '_'),
+        kode: form.kode,
         label: form.nama,
       };
       if (editTarget) {
@@ -155,13 +158,16 @@ export default function TabStatusNikah() {
         />
 
         <CrudTable<StatusNikah>
-          headers={['Nama Status Pernikahan', 'Aksi']}
+          headers={['Kode', 'Nama Status Pernikahan', 'Aksi']}
           loading={loading}
           loadingText="Memuat data status pernikahan..."
           data={paginatedData}
           renderRow={(r) => (
             <tr key={r.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors">
               <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-200">
+                {r.kode}
+              </td>
+              <td className="px-5 py-3.5 text-slate-650 dark:text-slate-405">
                 {r.nama}
               </td>
               <td className="px-5 py-3.5">
@@ -201,6 +207,18 @@ export default function TabStatusNikah() {
         saving={saving}
         icon={Heart}
       >
+        <div>
+          <label className={labelCls}>Kode Status *</label>
+          <input
+            type="text"
+            value={form.kode}
+            onChange={e => setForm(f => ({ ...f, kode: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '') }))}
+            placeholder="cth: BELUM_NIKAH"
+            className={`${inputCls} ${errors.kode ? 'border-rose-500' : ''}`}
+          />
+          {errors.kode && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.kode}</span>}
+        </div>
+
         <div>
           <label className={labelCls}>Nama Status *</label>
           <input

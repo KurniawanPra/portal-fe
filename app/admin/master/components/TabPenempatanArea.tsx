@@ -22,6 +22,7 @@ const googleSatelliteProvider = (x: number, y: number, z: number) => {
 
 interface PenempatanArea {
   id: string;
+  kode: string;
   nama: string;
   longitude: string;
   latitude: string;
@@ -29,6 +30,7 @@ interface PenempatanArea {
 
 interface ApiPenempatanArea {
   id: string;
+  kode: string;
   nama: string;
   longitude: string;
   latitude: string;
@@ -46,7 +48,7 @@ export default function TabPenempatanArea() {
   const [deleteTarget, setDeleteTarget] = useState<PenempatanArea | null>(null);
   const [previewTarget, setPreviewTarget] = useState<PenempatanArea | null>(null);
   const [previewMode3D, setPreviewMode3D] = useState(true);
-  const [form, setForm] = useState({ nama: '', longitude: '', latitude: '' });
+  const [form, setForm] = useState({ kode: '', nama: '', longitude: '', latitude: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -87,7 +89,7 @@ export default function TabPenempatanArea() {
 
   const openCreate = () => {
     setEditTarget(null);
-    setForm({ nama: '', longitude: '', latitude: '' });
+    setForm({ kode: '', nama: '', longitude: '', latitude: '' });
     setMapCenter([3.1972, 99.3732]);
     setMapZoom(12);
     setSearchQuery('');
@@ -100,7 +102,7 @@ export default function TabPenempatanArea() {
 
   const openEdit = (r: PenempatanArea) => {
     setEditTarget(r);
-    setForm({ nama: r.nama, longitude: r.longitude, latitude: r.latitude });
+    setForm({ kode: r.kode || '', nama: r.nama, longitude: r.longitude, latitude: r.latitude });
     const lat = parseFloat(r.latitude);
     const lng = parseFloat(r.longitude);
     if (!isNaN(lat) && !isNaN(lng)) {
@@ -182,6 +184,7 @@ export default function TabPenempatanArea() {
   const handleSave = async () => {
     setErrors({});
     const newErrors: Record<string, string> = {};
+    if (!form.kode.trim()) { newErrors.kode = 'Kode area wajib diisi.'; }
     if (!form.nama.trim()) { newErrors.nama = 'Nama area wajib diisi.'; }
     if (!form.longitude.trim()) { newErrors.longitude = 'Longitude wajib diisi.'; }
     if (!form.latitude.trim()) { newErrors.latitude = 'Latitude wajib diisi.'; }
@@ -195,6 +198,7 @@ export default function TabPenempatanArea() {
     setSaving(true);
     try {
       const payload = {
+        kode: form.kode,
         nama: form.nama,
         longitude: form.longitude,
         latitude: form.latitude,
@@ -275,7 +279,7 @@ export default function TabPenempatanArea() {
         />
 
         <CrudTable<PenempatanArea>
-          headers={['No', 'Nama Area Kerja', 'Longitude', 'Latitude', 'Aksi']}
+          headers={['No', 'Kode', 'Nama Area Kerja', 'Longitude', 'Latitude', 'Aksi']}
           loading={loading}
           loadingText="Memuat data area kerja..."
           data={paginatedData}
@@ -285,6 +289,9 @@ export default function TabPenempatanArea() {
                 {(currentPage - 1) * itemsPerPage + idx + 1}
               </td>
               <td className="px-5 py-3.5 font-bold text-slate-800 dark:text-slate-100">
+                {row.kode}
+              </td>
+              <td className="px-5 py-3.5 text-slate-650 dark:text-slate-350">
                 {row.nama}
               </td>
               <td className="px-5 py-3.5 font-mono text-xs text-slate-500 dark:text-slate-400">
@@ -342,6 +349,18 @@ export default function TabPenempatanArea() {
         saving={saving}
         icon={MapPin}
       >
+        <div>
+          <label className={labelCls}>Kode Area Kerja *</label>
+          <input
+            type="text"
+            value={form.kode}
+            onChange={e => setForm(f => ({ ...f, kode: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '') }))}
+            placeholder="cth: PKS_SEI_MANGKEI"
+            className={`${inputCls} ${errors.kode ? 'border-rose-500' : ''}`}
+          />
+          {errors.kode && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.kode}</span>}
+        </div>
+
         <div>
           <label className={labelCls}>Nama Area Kerja *</label>
           <input

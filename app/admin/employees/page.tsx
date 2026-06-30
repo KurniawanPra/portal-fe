@@ -37,6 +37,7 @@ interface ApiEmployee {
   statusKaryawanId: string | null;
   pendidikanTerakhirId: string | null;
   statusPernikahanId: string | null;
+  penempatanAreaId: string | null;
   agama: string | null;
   createdAt: string;
   updatedAt: string;
@@ -71,6 +72,9 @@ interface EmployeeData {
   statusKaryawanId: string;
   pendidikanTerakhirId: string;
   statusPernikahanId: string;
+  statusPernikahanKode: string;
+  penempatanAreaId: string;
+  penempatanAreaNama: string;
   fotoProfil: string;
   atasanId: string;
   agama: string;
@@ -78,12 +82,12 @@ interface EmployeeData {
 
 // Color palettes
 const STATUS_BADGE = {
-  true:  'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20',
+  true: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20',
   false: 'bg-rose-500/10 text-rose-600 dark:text-rose-450 border-rose-500/20',
 } as Record<string, string>;
 
 const STATUS_DOT = {
-  true:  'bg-emerald-500 dark:bg-emerald-400',
+  true: 'bg-emerald-500 dark:bg-emerald-400',
   false: 'bg-rose-500 dark:bg-rose-400',
 } as Record<string, string>;
 
@@ -127,6 +131,7 @@ interface FormData {
   statusKaryawanId: string;
   pendidikanTerakhirId: string;
   statusPernikahanId: string;
+  penempatanAreaId: string;
   atasanId: string;
   agama: string;
 }
@@ -138,6 +143,7 @@ const emptyForm: FormData = {
   statusKaryawanId: '',
   pendidikanTerakhirId: '',
   statusPernikahanId: '',
+  penempatanAreaId: '',
   atasanId: '',
   agama: '',
 };
@@ -157,6 +163,7 @@ interface EmployeeImportPayload {
   statusKaryawanId: string;
   pendidikanTerakhirId: string;
   statusPernikahanId: string;
+  penempatanAreaId: string | null;
   nomorHp: string;
   alamat: string;
   agama: string;
@@ -181,24 +188,23 @@ interface ImportEmployeeRow {
 }
 
 const IMPORT_HEADERS = [
+  'Nama_Lengkap',
   'NRK',
   'NIK',
-  'Nama',
-  'Jenis Kelamin',
+  'Jenis_Kelamin',
   'Jabatan',
-  'Kode Unit',
-  'Tanggal Masuk',
-  'Tempat Lahir',
-  'Tanggal Lahir',
-  'Kode Grade',
+  'Unit_Organisasi',
+  'Tempat_Lahir',
+  'Tanggal_Lahir',
+  'Tanggal_Masuk',
+  'Status',
+  'Grade',
   'Status Karyawan',
-  'Pendidikan Terakhir',
-  'Status Pernikahan',
+  'Pendidikan',
+  'Status_Pernikahan',
   'Agama',
-  'Nomor HP',
+  'Nomor_Hp',
   'Alamat',
-  'Status Aktif',
-  'Atasan NRK',
 ];
 
 const normalizeKey = (value: unknown) =>
@@ -265,7 +271,7 @@ export default function ManajemenEmployeePage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const [search, setSearch]       = useState('');
+  const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'Semua' | 'Aktif' | 'Non-Aktif'>('Semua');
   const [filterGender, setFilterGender] = useState<'Semua' | 'L' | 'P'>('Semua');
   const [currentPage, setCurrentPage] = useState(1);
@@ -276,10 +282,10 @@ export default function ManajemenEmployeePage() {
     setCurrentPage(1);
   }, [search, filterStatus, filterGender]);
 
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [editTarget,   setEditTarget]   = useState<EmployeeData | null>(null);
-  const [form,         setForm]         = useState<FormData>(emptyForm);
-  const [unitSearch,   setUnitSearch]   = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<EmployeeData | null>(null);
+  const [form, setForm] = useState<FormData>(emptyForm);
+  const [unitSearch, setUnitSearch] = useState('');
   const [unitDropdownOpen, setUnitDropdownOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -290,13 +296,14 @@ export default function ManajemenEmployeePage() {
   const [importDragging, setImportDragging] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
-  const [grades,            setGrades]            = useState<any[]>([]);
-  const [statusKaryawans,   setStatusKaryawans]   = useState<any[]>([]);
-  const [pendidikans,       setPendidikans]       = useState<any[]>([]);
+  const [grades, setGrades] = useState<any[]>([]);
+  const [statusKaryawans, setStatusKaryawans] = useState<any[]>([]);
+  const [pendidikans, setPendidikans] = useState<any[]>([]);
   const [statusPernikahans, setStatusPernikahans] = useState<any[]>([]);
-  const [agamas,            setAgamas]            = useState<any[]>([]);
-  const [photoFile,         setPhotoFile]         = useState<File | null>(null);
-  const [errors,            setErrors]            = useState<Record<string, string>>({});
+  const [agamas, setAgamas] = useState<any[]>([]);
+  const [penempatanAreas, setPenempatanAreas] = useState<any[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const getUnitPathStr = useCallback((unitId: string) => {
     let curr = unitOrganisasis.find(u => u.id === unitId);
@@ -332,14 +339,14 @@ export default function ManajemenEmployeePage() {
     });
   }, [form.gradeId, employees, grades, editTarget, selectedGradeLevel]);
   const [deleteTarget, setDeleteTarget] = useState<EmployeeData | null>(null);
-  const [toast,        setToast]        = useState<{ type:'ok'|'err'; text:string } | null>(null);
+  const [toast, setToast] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
-  const showToast = (type: 'ok'|'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
+  const showToast = (type: 'ok' | 'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
 
   // ─── Fetch Data ────────────────────────────────────────────────────────────
   const fetchData = useCallback(async () => {
     try {
-      const [empRes, orgRes, gradeRes, statusRes, eduRes, marRes, agamaRes] = await Promise.all([
+      const [empRes, orgRes, gradeRes, statusRes, eduRes, marRes, agamaRes, penempatanRes] = await Promise.all([
         api.get<ApiEmployee[]>('/employees?limit=200'),
         api.get<UnitOrganisasi[]>('/org/unit?limit=200'),
         api.get<any[]>('/master/grade'),
@@ -347,6 +354,7 @@ export default function ManajemenEmployeePage() {
         api.get<any[]>('/master/pendidikan'),
         api.get<any[]>('/master/status-pernikahan'),
         api.get<any[]>('/master/agama'),
+        api.get<any[]>('/master/penempatan-area'),
       ]);
 
       const orgMap = new Map<string, string>();
@@ -357,6 +365,13 @@ export default function ManajemenEmployeePage() {
       setPendidikans(eduRes.data || []);
       setStatusPernikahans(marRes.data || []);
       setAgamas(agamaRes.data || []);
+      setPenempatanAreas(penempatanRes.data || []);
+
+      const penempatanMap = new Map<string, string>();
+      (penempatanRes.data || []).forEach(p => penempatanMap.set(p.id, p.nama));
+
+      const pernikahanMap = new Map<string, string>();
+      (marRes.data || []).forEach(m => pernikahanMap.set(m.id, m.kode));
 
       const mapped: EmployeeData[] = (empRes.data || []).map(e => ({
         id: e.id,
@@ -378,6 +393,9 @@ export default function ManajemenEmployeePage() {
         statusKaryawanId: e.statusKaryawanId || '',
         pendidikanTerakhirId: e.pendidikanTerakhirId || '',
         statusPernikahanId: e.statusPernikahanId || '',
+        statusPernikahanKode: e.statusPernikahanId ? (pernikahanMap.get(e.statusPernikahanId) || '-') : '-',
+        penempatanAreaId: e.penempatanAreaId || '',
+        penempatanAreaNama: e.penempatanAreaId ? (penempatanMap.get(e.penempatanAreaId) || '-') : '-',
         fotoProfil: e.fotoProfil || '',
         atasanId: e.atasanId || '',
         agama: e.agama || '',
@@ -474,25 +492,24 @@ export default function ManajemenEmployeePage() {
 
       const mappedRows: ImportEmployeeRow[] = rawRows.map((row, index) => {
         const errors: string[] = [];
+        const nama = getCellValue(row, ['Nama_Lengkap', 'Nama Lengkap', 'Nama']);
         const nrk = getCellValue(row, ['NRK']);
         const nik = getCellValue(row, ['NIK']);
-        const nama = getCellValue(row, ['Nama', 'Nama Lengkap']);
-        const genderInput = getCellValue(row, ['Jenis Kelamin', 'Gender']);
+        const genderInput = getCellValue(row, ['Jenis_Kelamin', 'Jenis Kelamin', 'Gender']);
         const jenisKelamin = parseGender(genderInput);
         const jabatan = getCellValue(row, ['Jabatan']);
-        const unitInput = getCellValue(row, ['Kode Unit', 'Unit Organisasi', 'Unit Kerja']);
-        const tanggalMasuk = parseExcelDate(getCellValue(row, ['Tanggal Masuk', 'Tanggal Masuk Kerja']));
-        const tempatLahir = getCellValue(row, ['Tempat Lahir']);
-        const tanggalLahir = parseExcelDate(getCellValue(row, ['Tanggal Lahir']));
-        const gradeInput = getCellValue(row, ['Kode Grade', 'Grade', 'Grade / Golongan']);
-        const statusKaryawanInput = getCellValue(row, ['Status Karyawan']);
-        const pendidikanInput = getCellValue(row, ['Pendidikan Terakhir', 'Pendidikan']);
-        const statusPernikahanInput = getCellValue(row, ['Status Pernikahan']);
+        const unitInput = getCellValue(row, ['Unit_Organisasi', 'Kode Unit', 'Unit Organisasi', 'Unit Kerja']);
+        const tempatLahir = getCellValue(row, ['Tempat_Lahir', 'Tempat Lahir']);
+        const tanggalLahir = parseExcelDate(getCellValue(row, ['Tanggal_Lahir', 'Tanggal Lahir']));
+        const tanggalMasuk = parseExcelDate(getCellValue(row, ['Tanggal_Masuk', 'Tanggal Masuk', 'Tanggal Masuk Kerja']));
+        const activeInput = getCellValue(row, ['Status', 'Status Aktif']);
+        const gradeInput = getCellValue(row, ['Grade', 'Kode Grade', 'Grade / Golongan']);
+        const statusKaryawanInput = getCellValue(row, ['Status Karyawan', 'Status_Karyawan']);
+        const pendidikanInput = getCellValue(row, ['Pendidikan', 'Pendidikan Terakhir']);
+        const statusPernikahanInput = getCellValue(row, ['Status_Pernikahan', 'Status Pernikahan']);
         const agamaInput = getCellValue(row, ['Agama']);
-        const nomorHp = getCellValue(row, ['Nomor HP', 'No HP', 'No. HP', 'HP']);
+        const nomorHp = getCellValue(row, ['Nomor_Hp', 'Nomor HP', 'No HP', 'No. HP', 'HP']);
         const alamat = getCellValue(row, ['Alamat', 'Alamat Domisili']);
-        const activeInput = getCellValue(row, ['Status Aktif', 'Status']);
-        const atasanInput = getCellValue(row, ['Atasan NRK', 'NRK Atasan', 'Atasan']);
 
         const unit = findByCodeOrLabel(unitOrganisasis, unitInput);
         const grade = findByCodeOrLabel(grades, gradeInput);
@@ -500,13 +517,6 @@ export default function ManajemenEmployeePage() {
         const pendidikan = findByCodeOrLabel(pendidikans, pendidikanInput);
         const statusPernikahan = findByCodeOrLabel(statusPernikahans, statusPernikahanInput);
         const agama = findByCodeOrLabel(agamas, agamaInput);
-        const atasan = atasanInput
-          ? employees.find(emp =>
-              normalizeKey(emp.nrk) === normalizeKey(atasanInput) ||
-              normalizeKey(emp.nik) === normalizeKey(atasanInput) ||
-              normalizeKey(emp.nama) === normalizeKey(atasanInput)
-            )
-          : undefined;
 
         if (!nrk) errors.push('NRK wajib diisi.');
         if (!nik) errors.push('NIK wajib diisi.');
@@ -525,7 +535,6 @@ export default function ManajemenEmployeePage() {
         if (!agamaInput) errors.push('Agama wajib diisi.');
         if (!nomorHp) errors.push('Nomor HP wajib diisi.');
         if (!alamat) errors.push('Alamat wajib diisi.');
-        if (atasanInput && !atasan) errors.push('Atasan tidak ditemukan di data employee saat ini.');
         if (nrk && existingNrks.has(normalizeKey(nrk))) errors.push('NRK sudah ada di sistem.');
         if (nik && existingNiks.has(normalizeKey(nik))) errors.push('NIK sudah ada di sistem.');
         if (nrk && (nrkCounts.get(normalizeKey(nrk)) || 0) > 1) errors.push('NRK duplikat di file.');
@@ -538,7 +547,7 @@ export default function ManajemenEmployeePage() {
           jenisKelamin: jenisKelamin || 'L',
           jabatan,
           gradeId: grade?.id || '',
-          atasanId: atasan?.id || null,
+          atasanId: null,
           unitOrganisasiId: unit?.id || '',
           tanggalMasuk,
           tempatLahir,
@@ -546,6 +555,7 @@ export default function ManajemenEmployeePage() {
           statusKaryawanId: statusKaryawan?.id || '',
           pendidikanTerakhirId: pendidikan?.id || '',
           statusPernikahanId: statusPernikahan?.id || '',
+          penempatanAreaId: null,
           nomorHp,
           alamat,
           agama: agama?.label || agamaInput,
@@ -648,24 +658,23 @@ export default function ManajemenEmployeePage() {
 
     const templateRows = [
       {
+        Nama_Lengkap: 'Budi Santoso',
         NRK: 'NRK-0001',
         NIK: '3201234567890001',
-        Nama: 'Budi Santoso',
-        'Jenis Kelamin': 'L',
+        Jenis_Kelamin: 'L',
         Jabatan: 'Staff Operasional',
-        'Kode Unit': sampleUnit?.kode || 'KODE_UNIT',
-        'Tanggal Masuk': '2026-01-15',
-        'Tempat Lahir': 'Jakarta',
-        'Tanggal Lahir': '1998-05-20',
-        'Kode Grade': sampleGrade?.kode || 'G1',
+        Unit_Organisasi: sampleUnit?.kode || 'KODE_UNIT',
+        Tempat_Lahir: 'Jakarta',
+        Tanggal_Lahir: '1998-05-20',
+        Tanggal_Masuk: '2026-01-15',
+        Status: 'aktif',
+        Grade: sampleGrade?.kode || 'G1',
         'Status Karyawan': sampleStatus?.kode || sampleStatus?.label || 'TETAP',
-        'Pendidikan Terakhir': samplePendidikan?.kode || samplePendidikan?.label || 'S1',
-        'Status Pernikahan': samplePernikahan?.kode || samplePernikahan?.label || 'BELUM_MENIKAH',
+        Pendidikan: samplePendidikan?.kode || samplePendidikan?.label || 'S1',
+        Status_Pernikahan: samplePernikahan?.kode || samplePernikahan?.label || 'BELUM_NIKAH',
         Agama: sampleAgama?.label || 'Islam',
-        'Nomor HP': '081234567890',
+        Nomor_Hp: '081234567890',
         Alamat: 'Alamat lengkap karyawan',
-        'Status Aktif': 'Aktif',
-        'Atasan NRK': '',
       },
     ];
 
@@ -676,14 +685,13 @@ export default function ManajemenEmployeePage() {
       ...pendidikans.map(item => ({ Tipe: 'Pendidikan', Kode: item.kode, Label: item.label })),
       ...statusPernikahans.map(item => ({ Tipe: 'Status Pernikahan', Kode: item.kode, Label: item.label })),
       ...agamas.map(item => ({ Tipe: 'Agama', Kode: item.kode, Label: item.label })),
-      ...employees.map(item => ({ Tipe: 'Atasan', Kode: item.nrk, Label: item.nama })),
     ];
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(templateRows, { header: IMPORT_HEADERS }), 'Template Employee');
     XLSX.utils.book_append_sheet(workbook, XLSX.utils.json_to_sheet(referenceRows), 'Referensi');
     XLSX.writeFile(workbook, 'template-import-employee.xlsx');
-  }, [agamas, employees, grades, pendidikans, statusKaryawans, statusPernikahans, unitOrganisasis]);
+  }, [agamas, grades, pendidikans, statusKaryawans, statusPernikahans, unitOrganisasis]);
 
   const exportEmployees = useCallback(async () => {
     if (!filtered.length) {
@@ -737,7 +745,7 @@ export default function ManajemenEmployeePage() {
     setModalOpen(true);
   }, []);
 
-  const openEdit   = useCallback((e: EmployeeData) => {
+  const openEdit = useCallback((e: EmployeeData) => {
     setEditTarget(e);
 
     let unitPath: string[] = [];
@@ -769,6 +777,7 @@ export default function ManajemenEmployeePage() {
       statusKaryawanId: e.statusKaryawanId,
       pendidikanTerakhirId: e.pendidikanTerakhirId,
       statusPernikahanId: e.statusPernikahanId,
+      penempatanAreaId: e.penempatanAreaId || '',
       atasanId: e.atasanId || '',
       agama: e.agama || '',
     });
@@ -803,6 +812,7 @@ export default function ManajemenEmployeePage() {
         statusKaryawanId: form.statusKaryawanId || null,
         pendidikanTerakhirId: form.pendidikanTerakhirId || null,
         statusPernikahanId: form.statusPernikahanId || null,
+        penempatanAreaId: form.penempatanAreaId || null,
         atasanId: form.atasanId || null,
         agama: form.agama || null,
       };
@@ -900,10 +910,10 @@ export default function ManajemenEmployeePage() {
     catch { return s; }
   };
 
-  const activeCount   = employees.filter(e => e.isActive).length;
+  const activeCount = employees.filter(e => e.isActive).length;
   const inactiveCount = employees.filter(e => !e.isActive).length;
-  const maleCount     = employees.filter(e => e.jenisKelamin === 'L').length;
-  const femaleCount   = employees.filter(e => e.jenisKelamin === 'P').length;
+  const maleCount = employees.filter(e => e.jenisKelamin === 'L').length;
+  const femaleCount = employees.filter(e => e.jenisKelamin === 'P').length;
 
   return (
     <div className="space-y-6">
@@ -947,11 +957,11 @@ export default function ManajemenEmployeePage() {
       {/* Stats — flat inline */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label: 'Total',    value: employees.length, icon: Users,     color: 'text-amber-600 dark:text-amber-400'    },
-          { label: 'Aktif',    value: activeCount,      icon: UserCheck, color: 'text-emerald-650 dark:text-emerald-450' },
-          { label: 'Non-Aktif',value: inactiveCount,    icon: UserX,     color: 'text-rose-650 dark:text-rose-455'      },
-          { label: 'Laki-laki',value: maleCount,        icon: Users,     color: 'text-blue-650 dark:text-blue-400'      },
-          { label: 'Perempuan',value: femaleCount,       icon: Users,     color: 'text-pink-650 dark:text-pink-400'      },
+          { label: 'Total', value: employees.length, icon: Users, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Aktif', value: activeCount, icon: UserCheck, color: 'text-emerald-650 dark:text-emerald-450' },
+          { label: 'Non-Aktif', value: inactiveCount, icon: UserX, color: 'text-rose-650 dark:text-rose-455' },
+          { label: 'Laki-laki', value: maleCount, icon: Users, color: 'text-blue-650 dark:text-blue-400' },
+          { label: 'Perempuan', value: femaleCount, icon: Users, color: 'text-pink-650 dark:text-pink-400' },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
@@ -1002,7 +1012,7 @@ export default function ManajemenEmployeePage() {
 
         {/* Table */}
         <CrudTable<EmployeeData>
-          headers={['Employee', 'NIK', 'Jabatan / Unit', 'Jenis Kelamin', 'Status', 'Tgl Masuk', 'Aksi']}
+          headers={['Employee', 'NIK', 'Jabatan / Unit', 'Jenis Kelamin', 'Penempatan', 'Status Pernikahan', 'Status', 'Tgl Masuk', 'Aksi']}
           loading={loading}
           loadingText="Memuat data employee..."
           emptyText="Tidak ada employee yang sesuai."
@@ -1013,10 +1023,10 @@ export default function ManajemenEmployeePage() {
               <td className="px-5 py-3.5">
                 <div className="flex items-center gap-3">
                   {e.fotoProfil ? (
-                    <img 
-                      src={e.fotoProfil.startsWith('http') ? e.fotoProfil : `/uploads/${e.fotoProfil}`} 
-                      alt={e.nama} 
-                      className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]" 
+                    <img
+                      src={e.fotoProfil.startsWith('http') ? e.fotoProfil : `/uploads/${e.fotoProfil}`}
+                      alt={e.nama}
+                      className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]"
                     />
                   ) : (
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-800/85 text-slate-400 dark:text-slate-500 border border-slate-205/50 dark:border-white/[0.04] shadow-sm">
@@ -1048,6 +1058,16 @@ export default function ManajemenEmployeePage() {
               <td className="px-5 py-3.5">
                 <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${GENDER_BADGE[e.jenisKelamin]}`}>
                   {e.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
+                </span>
+              </td>
+              {/* Penempatan */}
+              <td className="px-5 py-3.5">
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{e.penempatanAreaNama}</p>
+              </td>
+              {/* Status Pernikahan */}
+              <td className="px-5 py-3.5">
+                <span className="rounded bg-slate-100 dark:bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-600 dark:text-slate-400">
+                  {e.statusPernikahanKode}
                 </span>
               </td>
               {/* Status */}
@@ -1149,9 +1169,8 @@ export default function ManajemenEmployeePage() {
                         disabled={validImportCount === 0 || importing}
                         className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-650 transition-all hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/[0.08] dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-white/[0.04] cursor-pointer focus:outline-none"
                       >
-                        <span className={`flex h-4 w-4 items-center justify-center rounded border ${
-                          allValidSelected ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 dark:border-slate-700'
-                        }`}>
+                        <span className={`flex h-4 w-4 items-center justify-center rounded border ${allValidSelected ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 dark:border-slate-700'
+                          }`}>
                           {allValidSelected && <CheckCircle2 className="h-3 w-3" />}
                         </span>
                         {allValidSelected ? 'Batalkan Semua' : 'Select All Data Valid'}
@@ -1182,11 +1201,10 @@ export default function ManajemenEmployeePage() {
                                     type="button"
                                     onClick={() => toggleImportRow(row.rowNumber)}
                                     disabled={!canSelect || importing}
-                                    className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
-                                      row.selected
+                                    className={`flex h-5 w-5 items-center justify-center rounded-md border transition-all disabled:cursor-not-allowed disabled:opacity-40 ${row.selected
                                         ? 'border-emerald-500 bg-emerald-500 text-white'
                                         : 'border-slate-300 bg-white text-transparent dark:border-slate-700 dark:bg-slate-950'
-                                    }`}
+                                      }`}
                                   >
                                     <CheckCircle2 className="h-3.5 w-3.5" />
                                   </button>
@@ -1203,13 +1221,12 @@ export default function ManajemenEmployeePage() {
                                 </td>
                                 <td className="px-4 py-3 text-xs font-bold text-slate-650 dark:text-slate-300">{row.preview.grade}</td>
                                 <td className="px-4 py-3">
-                                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${
-                                    row.status === 'valid'
+                                  <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${row.status === 'valid'
                                       ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                       : row.status === 'imported'
                                         ? 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400'
                                         : 'border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                                  }`}>
+                                    }`}>
                                     {row.status === 'valid' ? 'Siap' : row.status === 'imported' ? 'Imported' : row.status === 'failed' ? 'Gagal' : 'Invalid'}
                                   </span>
                                 </td>
@@ -1249,7 +1266,7 @@ export default function ManajemenEmployeePage() {
                   >
                     Batal
                   </button>
-                   <PrimaryButton onClick={handleImportSelected} disabled={importLoading || importing || selectedImportCount === 0} className="flex items-center gap-2">
+                  <PrimaryButton onClick={handleImportSelected} disabled={importLoading || importing || selectedImportCount === 0} className="flex items-center gap-2">
                     {importing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     Import Data
                   </PrimaryButton>
@@ -1268,7 +1285,7 @@ export default function ManajemenEmployeePage() {
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
                 <div className="flex items-center gap-2.5">
-                  {editTarget ? <Pencil className="h-4 w-4 text-indigo-500 dark:text-indigo-400"/> : <Plus className="h-4 w-4 text-indigo-500 dark:text-indigo-400"/>}
+                  {editTarget ? <Pencil className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> : <Plus className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />}
                   <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">{editTarget ? 'Edit Data Employee' : 'Tambah Employee Baru'}</h2>
                 </div>
                 <button onClick={() => setModalOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer focus:outline-none">
@@ -1279,7 +1296,7 @@ export default function ManajemenEmployeePage() {
                 {/* Nama */}
                 <div>
                   <label className={labelCls}>Nama Lengkap *</label>
-                  <input type="text" value={form.nama} onChange={e => setForm(f=>({...f, nama:e.target.value}))} placeholder="cth: Budi Santoso, S.T." 
+                  <input type="text" value={form.nama} onChange={e => setForm(f => ({ ...f, nama: e.target.value }))} placeholder="cth: Budi Santoso, S.T."
                     className={`${inputCls} ${errors.nama ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                   {errors.nama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nama}</span>}
                 </div>
@@ -1287,13 +1304,13 @@ export default function ManajemenEmployeePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>NRK *</label>
-                    <input type="text" value={form.nrk} onChange={e => setForm(f=>({...f, nrk:e.target.value}))} placeholder="NRK-XXXXXX" 
+                    <input type="text" value={form.nrk} onChange={e => setForm(f => ({ ...f, nrk: e.target.value }))} placeholder="NRK-XXXXXX"
                       className={`${inputCls} ${errors.nrk ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                     {errors.nrk && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nrk}</span>}
                   </div>
                   <div>
                     <label className={labelCls}>NIK (16 digit) *</label>
-                    <input type="text" value={form.nik} onChange={e => setForm(f=>({...f, nik:e.target.value.replace(/\D/g, '').slice(0, 16)}))} placeholder="320123456789xxxx" maxLength={16} 
+                    <input type="text" value={form.nik} onChange={e => setForm(f => ({ ...f, nik: e.target.value.replace(/\D/g, '').slice(0, 16) }))} placeholder="320123456789xxxx" maxLength={16}
                       className={`${inputCls} ${errors.nik ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                     {errors.nik && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nik}</span>}
                   </div>
@@ -1317,7 +1334,7 @@ export default function ManajemenEmployeePage() {
                   </div>
                   <div>
                     <label className={labelCls}>Jabatan *</label>
-                    <input type="text" value={form.jabatan} onChange={e => setForm(f=>({...f, jabatan:e.target.value}))} placeholder="cth: IT Specialist" 
+                    <input type="text" value={form.jabatan} onChange={e => setForm(f => ({ ...f, jabatan: e.target.value }))} placeholder="cth: IT Specialist"
                       className={`${inputCls} ${errors.jabatan ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                     {errors.jabatan && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.jabatan}</span>}
                   </div>
@@ -1326,7 +1343,7 @@ export default function ManajemenEmployeePage() {
                 {/* Searchable Unit Organisasi Dropdown */}
                 <div className="space-y-3 p-3.5 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
                   <div className="text-[10px] font-black uppercase tracking-wide text-slate-550 dark:text-slate-400 mb-1">Unit Organisasi</div>
-                  
+
                   {/* Selected Unit Parent Path (Hierarki di Atasnya) */}
                   {form.unitPath.length > 0 && (
                     <div className="rounded-lg bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/10 dark:border-amber-500/20 p-2.5 space-y-1">
@@ -1347,9 +1364,8 @@ export default function ManajemenEmployeePage() {
                       <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                       <div
                         onClick={() => setUnitDropdownOpen(o => !o)}
-                        className={`${inputCls} pl-10 pr-10 cursor-pointer flex items-center justify-between min-h-[42px] ${
-                          errors.unitPath ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''
-                        }`}
+                        className={`${inputCls} pl-10 pr-10 cursor-pointer flex items-center justify-between min-h-[42px] ${errors.unitPath ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''
+                          }`}
                       >
                         {form.unitPath.length > 0 ? (
                           <span className="truncate text-slate-800 dark:text-slate-200">
@@ -1372,7 +1388,7 @@ export default function ManajemenEmployeePage() {
                       <>
                         {/* Overlay to close popover when clicking outside */}
                         <div className="fixed inset-0 z-45" onClick={() => setUnitDropdownOpen(false)} />
-                        
+
                         <div className="absolute left-0 right-0 mt-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0a0f1a] shadow-xl p-2 z-50 space-y-1.5">
                           {/* Search Input Box */}
                           <div className="relative">
@@ -1388,12 +1404,13 @@ export default function ManajemenEmployeePage() {
                           </div>
 
                           {/* Options List */}
-                          <style dangerouslySetInnerHTML={{ __html: `
+                          <style dangerouslySetInnerHTML={{
+                            __html: `
                             .no-scrollbar::-webkit-scrollbar {
                               display: none;
                             }
                           ` }} />
-                          <div 
+                          <div
                             className="max-h-48 overflow-y-auto space-y-0.5 pr-1 no-scrollbar"
                             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                           >
@@ -1416,11 +1433,10 @@ export default function ManajemenEmployeePage() {
                                       setUnitDropdownOpen(false);
                                       setUnitSearch('');
                                     }}
-                                    className={`w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 flex flex-col gap-0.5 hover:bg-slate-100 dark:hover:bg-white/[0.03] ${
-                                      isSelected
+                                    className={`w-full text-left rounded-lg px-2.5 py-1.5 text-xs transition-all duration-150 flex flex-col gap-0.5 hover:bg-slate-100 dark:hover:bg-white/[0.03] ${isSelected
                                         ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border-l-2 border-amber-500 pl-2 rounded-l-none'
                                         : 'text-slate-700 dark:text-slate-300'
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-center gap-1.5">
                                       <span>{u.nama}</span>
@@ -1450,7 +1466,7 @@ export default function ManajemenEmployeePage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Tempat Lahir *</label>
-                    <input type="text" value={form.tempatLahir} onChange={e => setForm(f=>({...f, tempatLahir:e.target.value}))} placeholder="cth: Jakarta" 
+                    <input type="text" value={form.tempatLahir} onChange={e => setForm(f => ({ ...f, tempatLahir: e.target.value }))} placeholder="cth: Jakarta"
                       className={`${inputCls} ${errors.tempatLahir ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                     {errors.tempatLahir && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.tempatLahir}</span>}
                   </div>
@@ -1458,7 +1474,7 @@ export default function ManajemenEmployeePage() {
                     <label className={labelCls}>Tanggal Lahir *</label>
                     <CustomDatePicker
                       value={form.tanggalLahir}
-                      onChange={val => setForm(f=>({...f, tanggalLahir:val}))}
+                      onChange={val => setForm(f => ({ ...f, tanggalLahir: val }))}
                       placeholder="- Pilih Tanggal Lahir -"
                       error={!!errors.tanggalLahir}
                     />
@@ -1471,7 +1487,7 @@ export default function ManajemenEmployeePage() {
                     <label className={labelCls}>Tanggal Masuk *</label>
                     <CustomDatePicker
                       value={form.tanggalMasuk}
-                      onChange={val => setForm(f=>({...f, tanggalMasuk:val}))}
+                      onChange={val => setForm(f => ({ ...f, tanggalMasuk: val }))}
                       placeholder="- Pilih Tanggal Masuk -"
                       error={!!errors.tanggalMasuk}
                     />
@@ -1538,7 +1554,7 @@ export default function ManajemenEmployeePage() {
                     <label className={labelCls}>Status Pernikahan *</label>
                     <SearchSelect
                       searchable={true}
-                      options={statusPernikahans.map(m => ({ value: m.id, label: m.label }))}
+                      options={statusPernikahans.map(m => ({ value: m.id, label: `${m.kode} - ${m.label}` }))}
                       value={form.statusPernikahanId}
                       onChange={val => setForm(f => ({ ...f, statusPernikahanId: val }))}
                       placeholder="- Pilih Status -"
@@ -1548,18 +1564,32 @@ export default function ManajemenEmployeePage() {
                   </div>
                 </div>
 
-                {/* Agama */}
-                <div>
-                  <label className={labelCls}>Agama *</label>
-                  <SearchSelect
-                    searchable={false}
-                    options={agamas.map(a => ({ value: a.label, label: a.label }))}
-                    value={form.agama}
-                    onChange={val => setForm(f => ({ ...f, agama: val }))}
-                    placeholder="- Pilih Agama -"
-                    error={!!errors.agama}
-                  />
-                  {errors.agama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.agama}</span>}
+                {/* Penempatan Area & Agama */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Penempatan Area Kerja</label>
+                    <SearchSelect
+                      searchable={true}
+                      options={penempatanAreas.map(a => ({ value: a.id, label: a.nama }))}
+                      value={form.penempatanAreaId}
+                      onChange={val => setForm(f => ({ ...f, penempatanAreaId: val }))}
+                      placeholder="- Pilih Penempatan -"
+                      error={!!errors.penempatanAreaId}
+                    />
+                    {errors.penempatanAreaId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.penempatanAreaId}</span>}
+                  </div>
+                  <div>
+                    <label className={labelCls}>Agama *</label>
+                    <SearchSelect
+                      searchable={false}
+                      options={agamas.map(a => ({ value: a.label, label: a.label }))}
+                      value={form.agama}
+                      onChange={val => setForm(f => ({ ...f, agama: val }))}
+                      placeholder="- Pilih Agama -"
+                      error={!!errors.agama}
+                    />
+                    {errors.agama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.agama}</span>}
+                  </div>
                 </div>
 
                 {/* Atasan Langsung */}
@@ -1624,7 +1654,7 @@ export default function ManajemenEmployeePage() {
                   <label className={labelCls}>Nomor HP *</label>
                   <div className="relative z-0">
                     <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="tel" value={form.nomorHp} onChange={e => setForm(f=>({...f, nomorHp:e.target.value}))} placeholder="08xx-xxxx-xxxx" 
+                    <input type="tel" value={form.nomorHp} onChange={e => setForm(f => ({ ...f, nomorHp: e.target.value }))} placeholder="08xx-xxxx-xxxx"
                       className={`${inputCls} pl-10 ${errors.nomorHp ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                   </div>
                   {errors.nomorHp && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nomorHp}</span>}
@@ -1635,13 +1665,13 @@ export default function ManajemenEmployeePage() {
                   <label className={labelCls}>Alamat *</label>
                   <div className="relative z-0">
                     <MapPin className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <textarea value={form.alamat} onChange={e => setForm(f=>({...f, alamat:e.target.value}))} placeholder="Alamat lengkap..." rows={4}
+                    <textarea value={form.alamat} onChange={e => setForm(f => ({ ...f, alamat: e.target.value }))} placeholder="Alamat lengkap..." rows={4}
                       className={`${inputCls} pl-10 resize-none ${errors.alamat ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
                   </div>
                   {errors.alamat && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.alamat}</span>}
                 </div>
 
-                 {/* Foto Profil Upload */}
+                {/* Foto Profil Upload */}
                 <div className="space-y-2">
                   <label className={labelCls}>Foto Profil</label>
                   <div className="flex items-center gap-4 p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
