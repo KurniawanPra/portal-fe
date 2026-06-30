@@ -4,7 +4,7 @@ import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AppCardGrid from '@/components/dashboard/AppCardGrid';
 import { api } from '@/lib/api';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert } from 'lucide-react';
 
 interface ApiAplikasi {
   id: string;
@@ -35,6 +35,7 @@ function AplikasiContent() {
   const query = searchParams.get('q') || '';
   const [apps, setApps] = useState<Aplikasi[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApps = async () => {
@@ -52,14 +53,46 @@ function AplikasiContent() {
           kategori: app.kategori || 'Lainnya',
         }));
         setApps(mapped);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Gagal memuat data aplikasi:', err);
+        setErrorMsg(err.message || 'Gagal memuat data aplikasi');
       } finally {
         setLoading(false);
       }
     };
     fetchApps();
   }, []);
+
+  if (errorMsg) {
+    const isAccessDenied = errorMsg.includes('Akses ditolak') || errorMsg.includes('belum terhubung');
+    return (
+      <div className="transition-colors duration-300">
+        {/* Header Section */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 sm:text-3xl">
+            Portal Aplikasi Karyawan
+          </h1>
+          <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-400">
+            Akses seluruh aplikasi kerja PT Industri Nabati Lestari yang terintegrasi.
+          </p>
+        </div>
+
+        <div className="w-full flex flex-col items-center justify-center py-16 px-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-slate-800/60 rounded-3xl p-8 shadow-xl dark:shadow-slate-950/20 text-center mt-8">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">
+            Akses Terbatas
+          </h2>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-400 leading-relaxed max-w-md mb-6">
+            {isAccessDenied 
+              ? 'Akun Anda belum terhubung dengan data karyawan. Silakan hubungi divisi IT atau Administrator untuk melakukan sinkronisasi data karyawan Anda.'
+              : errorMsg}
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            PT. Industri Nabati Lestari — IT Division
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="transition-colors duration-300">

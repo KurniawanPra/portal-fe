@@ -129,12 +129,7 @@ export default function ManajemenUserPage() {
   const [resetPasskeyTarget, setResetPasskeyTarget] = useState<UserData | null>(null);
   const [resettingMfa, setResettingMfa] = useState(false);
 
-  // App Access states
-  const [appAccessTarget, setAppAccessTarget] = useState<UserData | null>(null);
-  const [allApps, setAllApps] = useState<any[]>([]);
-  const [userApps, setUserApps] = useState<any[]>([]);
-  const [loadingApps, setLoadingApps] = useState(false);
-  const [savingAppAccess, setSavingAppAccess] = useState<Record<string, boolean>>({});
+
 
   const showToast = (type: 'ok'|'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
 
@@ -337,52 +332,7 @@ export default function ManajemenUserPage() {
     }
   }, [resetPasskeyTarget, fetchUsers]);
 
-  // ─── Manage App Access ──────────────────────────────────────────────────────
-  const openAppAccess = useCallback(async (u: UserData) => {
-    setAppAccessTarget(u);
-    setLoadingApps(true);
-    try {
-      const [appsRes, userAppsRes] = await Promise.all([
-        api.get<any[]>('/apps?limit=100'),
-        api.get<any[]>(`/users/${u.id}/apps`),
-      ]);
-      setAllApps(appsRes.data || []);
-      setUserApps(userAppsRes.data || []);
-    } catch (err) {
-      showToast('err', err instanceof Error ? err.message : 'Gagal memuat data akses aplikasi.');
-    } finally {
-      setLoadingApps(false);
-    }
-  }, []);
-
-  const handleToggleAppAccess = async (appId: string, isGranted: boolean) => {
-    if (!appAccessTarget) return;
-    setSavingAppAccess(prev => ({ ...prev, [appId]: true }));
-    try {
-      if (isGranted) {
-        await api.delete(`/users/${appAccessTarget.id}/revoke-app/${appId}`);
-        setUserApps(prev => prev.filter(ua => ua.app.id !== appId));
-        showToast('ok', 'Akses aplikasi berhasil dicabut.');
-      } else {
-        const res = await api.post<{ id: string }>(`/users/${appAccessTarget.id}/grant-app`, { appId });
-        const appInfo = allApps.find(a => a.id === appId);
-        setUserApps(prev => [
-          ...prev,
-          {
-            accessId: res.data.id,
-            app: appInfo,
-          }
-        ]);
-        showToast('ok', 'Akses aplikasi berhasil diberikan.');
-      }
-    } catch (err) {
-      showToast('err', err instanceof Error ? err.message : 'Gagal mengubah akses aplikasi.');
-    } finally {
-      setSavingAppAccess(prev => ({ ...prev, [appId]: false }));
-    }
-  };
-
-  const fmtLogin = (s: string) => {
+    const fmtLogin = (s: string) => {
     if (s === '-') return '-';
     try { return new Date(s).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
     catch { return s; }
@@ -580,10 +530,7 @@ export default function ManajemenUserPage() {
                       <UserCheck className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  <button onClick={() => openAppAccess(u)} title="Kelola Akses Aplikasi"
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-500 transition-all cursor-pointer focus:outline-none">
-                    <UserCog className="h-3.5 w-3.5" />
-                  </button>
+
                   <TableActions
                     onEdit={() => openEdit(u)}
                     onDelete={() => setDeleteTarget(u)}
@@ -829,87 +776,7 @@ export default function ManajemenUserPage() {
         </div>
       </ModalPortal>
 
-      {/* Manage Application Access Modal */}
-      <ModalPortal open={!!appAccessTarget}>
-        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setAppAccessTarget(null)} />
-        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-md animate-fade-up">
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
-              {/* Header */}
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
-                <div className="flex items-center gap-2.5">
-                  <UserCog className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
-                  <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">Kelola Akses Aplikasi</h2>
-                </div>
-                <button onClick={() => setAppAccessTarget(null)} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer focus:outline-none">
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
 
-              {/* Body */}
-              <div className="px-5 py-5 space-y-4 max-h-[60vh] overflow-y-auto hide-scrollbar">
-                <div className="bg-slate-50 dark:bg-white/[0.01] p-3.5 border border-slate-150 dark:border-white/[0.04] rounded-xl">
-                  <p className="text-xs text-slate-500 dark:text-slate-450 leading-tight">
-                    Mengatur hak akses aplikasi untuk user:
-                  </p>
-                  <p className="text-sm font-black text-slate-800 dark:text-slate-150 mt-1">
-                    {appAccessTarget?.nama} <span className="font-medium text-slate-400">({appAccessTarget?.email})</span>
-                  </p>
-                </div>
-
-                {loadingApps ? (
-                  <div className="flex flex-col items-center justify-center py-12 gap-2">
-                    <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
-                    <span className="text-xs text-slate-400 font-bold">Memuat daftar aplikasi...</span>
-                  </div>
-                ) : allApps.length === 0 ? (
-                  <p className="text-center text-xs text-slate-455 dark:text-slate-500 py-8 font-semibold">Tidak ada aplikasi yang terdaftar.</p>
-                ) : (
-                  <div className="space-y-3.5">
-                    {allApps.map(app => {
-                      const userApp = userApps.find(ua => ua.app.id === app.id);
-                      const isGranted = !!userApp;
-                      const isSaving = !!savingAppAccess[app.id];
-
-                      return (
-                        <div key={app.id} className="flex items-center justify-between p-3.5 border border-slate-150 dark:border-white/[0.04] rounded-xl bg-white dark:bg-[#090d16] hover:bg-slate-50/50 dark:hover:bg-white/[0.01] transition-all">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="checkbox"
-                              checked={isGranted}
-                              disabled={isSaving}
-                              onChange={() => handleToggleAppAccess(app.id, isGranted)}
-                              className="h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500/25 cursor-pointer disabled:opacity-50"
-                            />
-                            <div>
-                              <p className="text-xs font-black text-slate-800 dark:text-slate-200">{app.nama}</p>
-                              <p className="text-[10px] text-slate-455 dark:text-slate-500 truncate max-w-[200px]">{app.url}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {isSaving && <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-500 shrink-0" />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-end border-t border-slate-150 dark:border-white/[0.06] px-5 py-4 bg-slate-50/50 dark:bg-white/[0.01]">
-                <button
-                  onClick={() => setAppAccessTarget(null)}
-                  className="rounded-xl border border-slate-250 dark:border-white/[0.08] bg-white dark:bg-[#0f1623] px-4 py-2 text-xs font-bold text-slate-650 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-white/[0.04] transition-all cursor-pointer focus:outline-none"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ModalPortal>
 
     </div>
   );
