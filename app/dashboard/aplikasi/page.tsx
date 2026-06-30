@@ -30,16 +30,28 @@ interface Aplikasi {
   kategori: string;
 }
 
+interface MeResponse {
+  id: string;
+  email: string;
+  role: 'user' | 'super_admin';
+  isActive: boolean;
+  employeeId: string | null;
+}
+
 function AplikasiContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q') || '';
   const [apps, setApps] = useState<Aplikasi[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isEmployee, setIsEmployee] = useState<boolean>(true);
 
   useEffect(() => {
     const fetchApps = async () => {
       try {
+        const meRes = await api.get<MeResponse>('/auth/me');
+        setIsEmployee(!!meRes.data.employeeId);
+
         const res = await api.get<ApiAplikasi[]>('/apps?limit=200&isActive=true');
         const mapped: Aplikasi[] = (res.data || []).map((app) => ({
           id: app.id,
@@ -138,7 +150,7 @@ function AplikasiContent() {
           <span className="text-sm font-semibold text-slate-400">Memuat aplikasi...</span>
         </div>
       ) : (
-        <AppCardGrid apps={apps} searchQuery={query} />
+        <AppCardGrid apps={apps} searchQuery={query} isEmployee={isEmployee} />
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { api } from '@/lib/api';
 import { resolveImageUrl } from '@/lib/utils';
 import { 
@@ -12,6 +12,9 @@ import {
   Layers, 
   ShoppingBag, 
   HelpCircle,
+  Lock,
+  X,
+  ShieldAlert,
   LucideProps
 } from 'lucide-react';
 
@@ -32,6 +35,7 @@ interface AppCardGridProps {
   searchQuery: string;
   showUuid?: boolean;
   columns?: 3 | 4;
+  isEmployee?: boolean;
 }
 
 // Icon mapping for Standard Lucide icons
@@ -211,14 +215,24 @@ const getAuthBadgeClass = (appName: string, authMode: string) => {
   }
 };
 
-export default function AppCardGrid({ apps, searchQuery, showUuid = false, columns = 3 }: AppCardGridProps) {
+export default function AppCardGrid({ apps, searchQuery, showUuid = false, columns = 3, isEmployee = true }: AppCardGridProps) {
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  });
+
   // Filter and sort apps by sequence (urutan)
   const filteredApps = apps
     .filter(
       (app) =>
-        app.is_active &&
-        (app.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          app.deskripsi.toLowerCase().includes(searchQuery.toLowerCase()))
+          app.is_active &&
+          (app.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            app.deskripsi.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => a.urutan - b.urutan);
 
@@ -234,6 +248,16 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
       window.open(app.url, '_blank', 'noopener,noreferrer');
       return;
     }
+
+    if (!isEmployee) {
+      setModal({
+        isOpen: true,
+        title: 'Akses SSO Terbatas',
+        message: 'Akses SSO hanya tersedia untuk akun yang terhubung ke data karyawan. Silakan hubungi divisi IT untuk melakukan sinkronisasi.',
+      });
+      return;
+    }
+
     try {
       const res = await api.get<{ token: string; redirectUrl: string }>(`/sso/token?app_id=${app.id}`);
       const token = res.data.token;
@@ -241,8 +265,18 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
       const separator = baseUrl.includes('?') ? '&' : '?';
       const finalUrl = `${baseUrl}${separator}token=${token}`;
       window.open(finalUrl, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Gagal menginisialisasi login SSO.');
+    } catch (err: any) {
+      // Extract pesan dari response axios atau Error biasa
+      const msg: string =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Gagal menginisialisasi login SSO.';
+      setModal({
+        isOpen: true,
+        title: 'Gagal Membuka Aplikasi',
+        message: msg,
+      });
     }
   };
 
@@ -258,76 +292,127 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
         </div>
       ) : (
         <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${columns === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} items-start`}>
-          {filteredApps.map((app, index) => (
-            <div
-              key={app.id}
-              style={{ animationDelay: `${index * 75}ms` }}
-              className="group perspective-1000 min-h-[12rem] w-full animate-fade-up fill-mode-both"
-            >
-              {/* Inner 3D Container */}
-              <div className="relative w-full rounded-3xl transition-transform duration-500 preserve-3d group-hover:[transform:rotateY(180deg)]">
-                
-                {/* Front Face: App Store Style Icon & Application Name */}
-                <div className="absolute inset-0 w-full h-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white/70 dark:bg-[#161b26]/70 backdrop-blur-xl shadow-sm flex flex-col items-center justify-center p-5 backface-hidden">
-                  <AppIcon name={app.icon} />
-                  <span className="mt-3 text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-200 text-center truncate w-full px-2">
-                    {app.nama}
-                  </span>
-                </div>
-
-                {/* Back Face: Redesigned Layout with Header, Body, and Footer */}
-                <div className="relative w-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-[#131924]/95 backdrop-blur-xl shadow-lg p-5 flex flex-col justify-between backface-hidden rotate-y-180 min-h-[12rem] gap-2">
+          {filteredApps.map((app, index) => {
+            const isLockedSso = app.auth_mode === 'sso' && !isEmployee;
+            return (
+              <div
+                key={app.id}
+                style={{ animationDelay: `${index * 75}ms` }}
+                className="group perspective-1000 min-h-[12rem] w-full animate-fade-up fill-mode-both"
+              >
+                {/* Inner 3D Container */}
+                <div className="relative w-full rounded-3xl transition-transform duration-500 preserve-3d group-hover:[transform:rotateY(180deg)]">
                   
-                  {/* 1. Header (Full Width Title and Subtitle) */}
-                  <div className="min-w-0">
-                    <h3 className="truncate text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                  {/* Front Face: App Store Style Icon & Application Name */}
+                  <div className={`absolute inset-0 w-full h-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white/70 dark:bg-[#161b26]/70 backdrop-blur-xl shadow-sm flex flex-col items-center justify-center p-5 backface-hidden ${isLockedSso ? 'opacity-75' : ''}`}>
+                    {isLockedSso && (
+                      <div className="absolute top-4 right-4 bg-rose-500/10 dark:bg-rose-500/20 text-rose-600 dark:text-rose-450 p-1.5 rounded-full border border-rose-500/20">
+                        <Lock className="h-3.5 w-3.5" />
+                      </div>
+                    )}
+                    <AppIcon name={app.icon} />
+                    <span className="mt-3 text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-200 text-center truncate w-full px-2 flex items-center justify-center gap-1">
                       {app.nama}
-                    </h3>
-                    <span className="block text-[9.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-0.5 truncate">
-                      {getSubInfo(app)}
                     </span>
-                    {showUuid && (
-                      <span className="block text-[8px] font-mono text-slate-350 dark:text-slate-600 mt-1 truncate select-all" title={app.id}>
-                        {app.id}
+                    {isLockedSso && (
+                      <span className="text-[10px] text-rose-500 dark:text-rose-450 font-bold mt-1 uppercase tracking-wider">
+                        Khusus Karyawan
                       </span>
                     )}
                   </div>
 
-                  {/* 2. Body (Description) */}
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-1 flex-1 font-medium">
-                    {app.deskripsi}
-                  </p>
+                  {/* Back Face: Redesigned Layout with Header, Body, and Footer */}
+                  <div className="relative w-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-[#131924]/95 backdrop-blur-xl shadow-lg p-5 flex flex-col justify-between backface-hidden rotate-y-180 min-h-[12rem] gap-2">
+                    
+                    {/* 1. Header (Full Width Title and Subtitle) */}
+                    <div className="min-w-0">
+                      <h3 className="truncate text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
+                        {app.nama}
+                        {isLockedSso && <Lock className="h-3.5 w-3.5 text-rose-500 shrink-0" />}
+                      </h3>
+                      <span className="block text-[9.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-0.5 truncate">
+                        {getSubInfo(app)}
+                      </span>
+                      {showUuid && (
+                        <span className="block text-[8px] font-mono text-slate-350 dark:text-slate-600 mt-1 truncate select-all" title={app.id}>
+                          {app.id}
+                        </span>
+                      )}
+                    </div>
 
-                  {/* 3. Footer (Divider + Auth Mode Badge (Left) + BUKA Button (Right)) */}
-                  <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/30 pt-2.5 mt-2 w-full shrink-0">
-                    {/* Left: Auth Badge */}
-                    <span
-                      className={`rounded-full border px-2.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wider ${getAuthBadgeClass(
-                        app.nama,
-                        app.auth_mode
-                      )}`}
-                    >
-                      {app.auth_mode}
-                    </span>
+                    {/* 2. Body (Description) */}
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-1 flex-1 font-medium">
+                      {isLockedSso 
+                        ? 'Aplikasi ini menggunakan integrasi Single Sign-On (SSO) internal karyawan. Akun Anda saat ini belum dihubungkan ke data karyawan.'
+                        : app.deskripsi}
+                    </p>
 
-                    {/* Right: BUKA Pill Button */}
-                    <a
-                      href={app.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => handleOpenApp(e, app)}
-                      className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${getBrandButtonClass(
-                        app.nama
-                      )}`}
-                    >
-                      BUKA
-                    </a>
+                    {/* 3. Footer (Divider + Auth Mode Badge (Left) + BUKA Button (Right)) */}
+                    <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/30 pt-2.5 mt-2 w-full shrink-0">
+                      {/* Left: Auth Badge */}
+                      <span
+                        className={`rounded-full border px-2.5 py-0.5 text-[8.5px] font-extrabold uppercase tracking-wider ${getAuthBadgeClass(
+                          app.nama,
+                          app.auth_mode
+                        )}`}
+                      >
+                        {app.auth_mode}
+                      </span>
+
+                      {/* Right: BUKA Pill Button */}
+                      <a
+                        href={app.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => handleOpenApp(e, app)}
+                        className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
+                          isLockedSso 
+                            ? 'bg-slate-200 dark:bg-slate-850 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-700/40' 
+                            : getBrandButtonClass(app.nama)
+                        }`}
+                      >
+                        {isLockedSso ? 'TERKUNCI' : 'BUKA'}
+                      </a>
+                    </div>
                   </div>
-                </div>
 
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {modal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white p-6 shadow-2xl dark:bg-[#121620] border border-slate-200 dark:border-slate-800/80 transition-all transform scale-100 duration-300">
+            
+            {/* Header / Icon */}
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/30">
+                <ShieldAlert className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                  {modal.title}
+                </h3>
+                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                  {modal.message}
+                </p>
               </div>
             </div>
-          ))}
+
+            {/* Action Button */}
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setModal(prev => ({ ...prev, isOpen: false }))}
+                className="rounded-full bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 px-6 py-2 text-xs font-black tracking-wider text-white dark:text-slate-900 transition-all duration-200 shadow-sm hover:shadow active:scale-95"
+              >
+                OK
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
