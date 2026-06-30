@@ -5,6 +5,7 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Search, Calendar } from 'lucide-react';
 import useSWR from 'swr';
 import { api } from '@/lib/api';
+import { resolveImageUrl } from '@/lib/utils';
 import { ThemeTogglerButton } from '@/components/animate-ui/components/buttons/theme-toggler';
 import { SidebarTrigger } from '@/components/animate-ui/components/radix/sidebar';
 
@@ -136,7 +137,7 @@ export default function Navbar({ employee }: NavbarProps) {
               </div>
               {employee.foto_profil ? (
                 <img
-                  src={employee.foto_profil.startsWith('http') ? employee.foto_profil : `/uploads/${employee.foto_profil}`}
+                  src={resolveImageUrl(employee.foto_profil)}
                   alt={employee.nama}
                   className="h-9 w-9 rounded-full object-cover shrink-0 border border-slate-200/80 dark:border-slate-700 shadow-sm"
                 />

@@ -13,6 +13,7 @@ import { api, ApiRequestError } from '@/lib/api';
 import FileUpload05 from '@/components/ui/file-upload-1';
 import { getAccessToken } from '@/lib/auth';
 import { PrimaryButton, FilterDropdown, CrudPagination, Toast, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
+import { resolveImageUrl } from '@/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type JenisKelamin = 'L' | 'P';
@@ -1024,7 +1025,7 @@ export default function ManajemenEmployeePage() {
                 <div className="flex items-center gap-3">
                   {e.fotoProfil ? (
                     <img
-                      src={e.fotoProfil.startsWith('http') ? e.fotoProfil : `/uploads/${e.fotoProfil}`}
+                      src={resolveImageUrl(e.fotoProfil)}
                       alt={e.nama}
                       className="h-9 w-9 shrink-0 rounded-xl object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]"
                     />
@@ -1624,7 +1625,7 @@ export default function ManajemenEmployeePage() {
                         />
                       ) : editTarget && editTarget.fotoProfil ? (
                         <img
-                          src={editTarget.fotoProfil.startsWith('http') ? editTarget.fotoProfil : `/uploads/${editTarget.fotoProfil}`}
+                          src={resolveImageUrl(editTarget.fotoProfil)}
                           alt="Current"
                           className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-white/[0.08]"
                         />
@@ -1684,7 +1685,7 @@ export default function ManajemenEmployeePage() {
                         />
                       ) : editTarget && editTarget.fotoProfil ? (
                         <img
-                          src={editTarget.fotoProfil.startsWith('http') ? editTarget.fotoProfil : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/uploads/${editTarget.fotoProfil}`}
+                          src={resolveImageUrl(editTarget.fotoProfil)}
                           alt="Current"
                           className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-white/[0.08]"
                         />

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutGrid, User, ShieldAlert, LogOut } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, resolveImageUrl } from '@/lib/utils';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import {
   Sidebar as RadixSidebar,
@@ -113,7 +113,7 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           <div className="flex items-center gap-2.5 overflow-hidden">
             {employee.foto_profil ? (
               <img
-                src={employee.foto_profil.startsWith('http') ? employee.foto_profil : `/uploads/${employee.foto_profil}`}
+                src={resolveImageUrl(employee.foto_profil)}
                 alt={employee.nama}
                 className="h-8 w-8 shrink-0 rounded-full object-cover shadow-sm border border-slate-200 dark:border-white/[0.08]"
               />

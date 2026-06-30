@@ -8,6 +8,7 @@ import { CustomDatePicker } from '@/components/ui/CustomDatePicker';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { EmployeeData, FormDataState, UnitOrganisasi, JenisKelamin } from './types';
 import { inputCls, labelCls } from '@/admin/master/components/shared';
+import { resolveImageUrl } from '@/lib/utils';
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -372,7 +373,7 @@ export function EmployeeModal({
                       />
                     ) : editTarget && editTarget.fotoProfil ? (
                       <img
-                        src={editTarget.fotoProfil.startsWith('http') ? editTarget.fotoProfil : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/uploads/${editTarget.fotoProfil}`}
+                        src={resolveImageUrl(editTarget.fotoProfil)}
                         alt="Current"
                         className="h-14 w-14 rounded-xl object-cover border border-slate-200 dark:border-white/[0.08]"
                       />

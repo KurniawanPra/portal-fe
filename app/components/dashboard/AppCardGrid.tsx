@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { api } from '@/lib/api';
+import { resolveImageUrl } from '@/lib/utils';
 import { 
   Clock, 
   BookOpen, 
@@ -118,7 +119,7 @@ function AppIcon({ name }: { name: string }) {
     default:
       const isImg = name && (name.startsWith('http') || name.includes('.') || name.includes('/') || name.includes('\\'));
       if (isImg) {
-        const srcUrl = name.startsWith('http') ? name : `/uploads/${name}`;
+        const srcUrl = resolveImageUrl(name);
         return (
           <div className={containerClass}>
             <img

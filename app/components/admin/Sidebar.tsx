@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutGrid, Users, LogOut, Database, UserCog, GitBranch, Network, User, ShieldAlert, ChevronDown, ChevronRight, Layers } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, resolveImageUrl } from '@/lib/utils';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import {
   Sidebar as RadixSidebar,
@@ -235,7 +235,7 @@ export default function AdminSidebar({ admin, onLogout }: AdminSidebarProps) {
           <Link href="/admin/profile" className="flex items-center gap-2.5 overflow-hidden group hover:opacity-80 transition-opacity cursor-pointer">
             {admin.foto_profil ? (
               <img
-                src={admin.foto_profil.startsWith('http') ? admin.foto_profil : `/uploads/${admin.foto_profil}`}
+                src={resolveImageUrl(admin.foto_profil)}
                 alt={admin.nama}
                 className="h-8 w-8 shrink-0 rounded-full object-cover shadow-md border border-slate-200 dark:border-white/[0.08]"
               />

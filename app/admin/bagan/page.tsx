@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { resolveImageUrl } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TipeUnit = 'direktorat' | 'sevp' | 'bagian' | 'sub_bagian' | 'seksi';
@@ -167,9 +168,7 @@ function normalizeTreeLevels(nodes: TreeNode[]): TreeNode[] {
 
 // ─── Avatar helpers ───────────────────────────────────────────────────────────
 function getAvatarUrl(fotoProfil: string | null | undefined): string | null {
-  if (!fotoProfil) return null;
-  if (fotoProfil.startsWith('http')) return fotoProfil;
-  return `/uploads/${fotoProfil}`;
+  return resolveImageUrl(fotoProfil) || null;
 }
 
 function getInitials(nama: string): string {
@@ -2018,7 +2017,7 @@ export default function BaganOrganisasiPage() {
                                 <div key={emp.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-white dark:bg-white/[0.01] hover:border-slate-250 dark:hover:border-white/[0.08] transition-all">
                                   {emp.fotoProfil ? (
                                     <img
-                                      src={emp.fotoProfil.startsWith('http') ? emp.fotoProfil : `/uploads/${emp.fotoProfil}`}
+                                      src={resolveImageUrl(emp.fotoProfil)}
                                       alt={emp.nama}
                                       className="h-10 w-10 rounded-full object-cover shrink-0 border border-slate-100 dark:border-white/[0.08]"
                                     />

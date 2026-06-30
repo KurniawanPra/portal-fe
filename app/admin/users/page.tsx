@@ -9,6 +9,7 @@ import {
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { api, ApiRequestError } from '@/lib/api';
 import { PrimaryButton, FilterDropdown, SecondaryButton, DangerButton, Toast, CrudPagination, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
+import { resolveImageUrl } from '@/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Backend roles: 'user' | 'super_admin'
@@ -484,7 +485,7 @@ export default function ManajemenUserPage() {
                 <div className="flex items-center gap-3">
                   {u.fotoProfil ? (
                     <img
-                      src={u.fotoProfil.startsWith('http') ? u.fotoProfil : `/uploads/${u.fotoProfil}`}
+                      src={resolveImageUrl(u.fotoProfil)}
                       alt={u.nama}
                       className="h-9 w-9 shrink-0 rounded-full object-cover shadow-sm border border-slate-100 dark:border-white/[0.08]"
                     />

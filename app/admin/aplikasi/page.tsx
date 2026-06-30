@@ -10,6 +10,7 @@ import { SearchSelect } from '@/components/ui/SearchSelect';
 import { api, ApiRequestError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import { PrimaryButton, FilterDropdown, SecondaryButton, DangerButton, Toast, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
+import { resolveImageUrl } from '@/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AuthMode = 'sso' | 'independent';
@@ -336,7 +337,7 @@ export default function ManajemenAplikasiPage() {
               <td className="px-5 py-3.5">
                 <div className="flex items-center gap-3">
                   {app.icon ? (
-                    <img src={app.icon.startsWith('http') ? app.icon : `/uploads/${app.icon}`} alt={app.nama} className="h-8 w-8 rounded-lg object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    <img src={resolveImageUrl(app.icon)} alt={app.nama} className="h-8 w-8 rounded-lg object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20">
                       <LayoutGrid className="h-4 w-4 text-amber-500" />
@@ -500,7 +501,7 @@ export default function ManajemenAplikasiPage() {
                         />
                       ) : form.icon ? (
                         <img
-                          src={form.icon.startsWith('http') ? form.icon : `/uploads/${form.icon}`}
+                          src={resolveImageUrl(form.icon)}
                           alt="Current"
                           className="h-14 w-14 rounded-xl object-contain border border-slate-200 dark:border-white/[0.08]"
                         />
