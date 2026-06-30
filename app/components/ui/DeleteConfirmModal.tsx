@@ -37,10 +37,9 @@ export function DeleteConfirmModal({
       <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={onClose} />
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
-          <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20">
-              <Trash2 className="h-5 w-5 text-rose-500 dark:text-rose-400" />
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
+            <div className="mx-auto mb-4 flex items-center justify-center">
+              <Trash2 className="h-8 w-8 text-rose-500 dark:text-rose-400" />
             </div>
             <h3 className="text-base font-black text-slate-800 dark:text-slate-100">{title}</h3>
             <div className="mt-2 text-sm text-slate-550 dark:text-slate-400 leading-relaxed font-semibold">

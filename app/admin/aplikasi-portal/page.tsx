@@ -15,6 +15,7 @@ interface ApiAplikasi {
   deskripsi: string | null;
   urutan: number;
   isActive: boolean;
+  kategori?: string | null;
 }
 
 interface Aplikasi {
@@ -26,6 +27,7 @@ interface Aplikasi {
   deskripsi: string;
   urutan: number;
   is_active: boolean;
+  kategori: string;
 }
 
 function AplikasiContent() {
@@ -47,6 +49,7 @@ function AplikasiContent() {
           deskripsi: app.deskripsi || '',
           urutan: app.urutan,
           is_active: app.isActive,
+          kategori: app.kategori || 'Lainnya',
         }));
         setApps(mapped);
       } catch (err) {
@@ -102,7 +105,7 @@ function AplikasiContent() {
           <span className="text-sm font-semibold text-slate-400">Memuat aplikasi...</span>
         </div>
       ) : (
-        <AppCardGrid apps={apps} searchQuery={query} />
+        <AppCardGrid apps={apps} searchQuery={query} showUuid={true} columns={4} />
       )}
     </div>
   );

@@ -15,6 +15,7 @@ interface ApiAplikasi {
   deskripsi: string | null;
   urutan: number;
   isActive: boolean;
+  kategori?: string | null;
 }
 
 interface Aplikasi {
@@ -26,6 +27,7 @@ interface Aplikasi {
   deskripsi: string;
   urutan: number;
   is_active: boolean;
+  kategori: string;
 }
 
 function AplikasiContent() {
@@ -47,6 +49,7 @@ function AplikasiContent() {
           deskripsi: app.deskripsi || '',
           urutan: app.urutan,
           is_active: app.isActive,
+          kategori: app.kategori || 'Lainnya',
         }));
         setApps(mapped);
       } catch (err) {

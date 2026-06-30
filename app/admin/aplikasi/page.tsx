@@ -9,7 +9,7 @@ import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect } from '@/components/ui/SearchSelect';
 import { api, ApiRequestError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
-import { PrimaryButton, FilterDropdown } from '@/admin/master/components/shared';
+import { PrimaryButton, FilterDropdown, SecondaryButton, DangerButton, Toast, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type AuthMode = 'sso' | 'independent';
@@ -307,16 +307,11 @@ export default function ManajemenAplikasiPage() {
 
         {/* Toolbar */}
         <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-slate-855 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Cari nama, URL, atau deskripsi..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className={`${inputCls} pl-10`}
-            />
-          </div>
+          <SearchInput
+            placeholder="Cari nama, URL, atau deskripsi..."
+            value={search}
+            onChange={setSearch}
+          />
           <FilterDropdown<'Semua' | 'Aktif' | 'Non-Aktif'>
             value={filterActive}
             onChange={setFilterActive}
@@ -329,93 +324,74 @@ export default function ManajemenAplikasiPage() {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="flex items-center justify-center py-20 gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-amber-550" />
-              <span className="text-sm font-semibold text-slate-400">Memuat data aplikasi...</span>
-            </div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-white/[0.04]">
-                  {['#', 'Aplikasi', 'Kategori', 'Auth Mode', 'Dibuat', 'Status', 'Aksi'].map(h => (
-                    <th key={h} className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 last:text-right">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.03]">
-                {filtered.length === 0 ? (
-                  <tr><td colSpan={7} className="px-5 py-12 text-center text-sm font-semibold text-slate-455 dark:text-slate-500">Tidak ada aplikasi yang sesuai.</td></tr>
-                ) : paginatedData.map(app => (
-                  <tr key={app.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
-                    <td className="px-5 py-3.5 text-xs font-bold text-slate-450 dark:text-slate-600">{app.urutan}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-3">
-                        {app.icon ? (
-                          <img src={app.icon.startsWith('http') ? app.icon : `/uploads/${app.icon}`} alt={app.nama} className="h-8 w-8 rounded-lg object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                        ) : (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20">
-                            <LayoutGrid className="h-4 w-4 text-amber-500" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{app.nama}</p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <Globe className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                            <a href={app.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-550 hover:text-amber-550 dark:hover:text-amber-400 transition-colors truncate max-w-[180px]">
-                              {app.url}
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="rounded-lg bg-slate-100 dark:bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-400">{app.kategori}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${AUTH_BADGE[app.auth_mode]}`}>
-                        {app.auth_mode === 'sso' ? 'SSO' : 'Independent'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs font-bold text-slate-500">
-                      {app.dibuat_pada !== '-' ? new Date(app.dibuat_pada).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <button
-                        onClick={() => toggleActive(app)}
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide transition-all duration-200 cursor-pointer focus:outline-none ${
-                          app.is_active
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20 hover:bg-emerald-500/20'
-                            : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 border-slate-200 dark:border-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.08]'
-                        }`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${app.is_active ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-slate-500'}`} />
-                        {app.is_active ? 'Aktif' : 'Nonaktif'}
-                      </button>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center justify-end gap-1">
-                        <a href={app.url} target="_blank" rel="noopener noreferrer"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-800 dark:hover:text-slate-350 transition-all">
-                          <ExternalLink className="h-3.5 w-3.5" />
-                        </a>
-                        <button onClick={() => openEdit(app)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-amber-500/10 hover:text-amber-500 transition-all cursor-pointer focus:outline-none">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                        <button onClick={() => setDeleteTarget(app)}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-rose-500/10 hover:text-rose-500 transition-all cursor-pointer focus:outline-none">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <CrudTable<Aplikasi>
+          headers={['#', 'Aplikasi', 'Kategori', 'Auth Mode', 'Dibuat', 'Status', 'Aksi']}
+          loading={loading}
+          loadingText="Memuat data aplikasi..."
+          emptyText="Tidak ada aplikasi yang sesuai."
+          data={paginatedData}
+          renderRow={(app) => (
+            <tr key={app.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
+              <td className="px-5 py-3.5 text-xs font-bold text-slate-450 dark:text-slate-600">{app.urutan}</td>
+              <td className="px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                  {app.icon ? (
+                    <img src={app.icon.startsWith('http') ? app.icon : `/uploads/${app.icon}`} alt={app.nama} className="h-8 w-8 rounded-lg object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20">
+                      <LayoutGrid className="h-4 w-4 text-amber-500" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{app.nama}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Globe className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
+                      <a href={app.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-550 hover:text-amber-550 dark:hover:text-amber-400 transition-colors truncate max-w-[180px]">
+                        {app.url}
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td className="px-5 py-3.5">
+                <span className="rounded-lg bg-slate-100 dark:bg-white/[0.06] px-2.5 py-1 text-[11px] font-bold text-slate-600 dark:text-slate-400">{app.kategori}</span>
+              </td>
+              <td className="px-5 py-3.5">
+                <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${AUTH_BADGE[app.auth_mode]}`}>
+                  {app.auth_mode === 'sso' ? 'SSO' : 'Independent'}
+                </span>
+              </td>
+              <td className="px-5 py-3.5 text-xs font-bold text-slate-500">
+                {app.dibuat_pada !== '-' ? new Date(app.dibuat_pada).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+              </td>
+              <td className="px-5 py-3.5">
+                <button
+                  onClick={() => toggleActive(app)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide transition-all duration-200 cursor-pointer focus:outline-none ${
+                    app.is_active
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20 hover:bg-emerald-500/20'
+                      : 'bg-slate-100 dark:bg-white/[0.04] text-slate-500 border-slate-200 dark:border-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.08]'
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${app.is_active ? 'bg-emerald-500 dark:bg-emerald-400' : 'bg-slate-500'}`} />
+                  {app.is_active ? 'Aktif' : 'Nonaktif'}
+                </button>
+              </td>
+              <td className="px-5 py-3.5">
+                <div className="flex items-center justify-end gap-1">
+                  <a href={app.url} target="_blank" rel="noopener noreferrer"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-800 dark:hover:text-slate-355 transition-all">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                  <TableActions
+                    onEdit={() => openEdit(app)}
+                    onDelete={() => setDeleteTarget(app)}
+                  />
+                </div>
+              </td>
+            </tr>
           )}
-        </div>
+        />
         {/* Pagination Footer */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01] text-[11px] font-bold text-slate-550 dark:text-slate-400">
           <div>
@@ -485,15 +461,10 @@ export default function ManajemenAplikasiPage() {
         <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
           <div className="pointer-events-auto w-full max-w-lg animate-fade-up">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
-              {/* Top accent */}
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
-
               {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20">
-                    {editTarget ? <Pencil className="h-4 w-4 text-amber-550 dark:text-amber-455" /> : <Plus className="h-4 w-4 text-amber-550 dark:text-amber-455" />}
-                  </div>
+                  {editTarget ? <Pencil className="h-4 w-4 text-amber-550 dark:text-amber-455" /> : <Plus className="h-4 w-4 text-amber-550 dark:text-amber-455" />}
                   <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
                     {editTarget ? 'Edit Aplikasi' : 'Tambah Aplikasi Baru'}
                   </h2>
@@ -624,10 +595,9 @@ export default function ManajemenAplikasiPage() {
         <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
         <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
           <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
-            <div className="relative overflow-hidden rounded-2xl border border-rose-500/20 bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-rose-500/50 to-transparent" />
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20">
-                <Trash2 className="h-6 w-6 text-rose-500 dark:text-rose-455" />
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
+              <div className="mx-auto mb-4 flex items-center justify-center">
+                <Trash2 className="h-8 w-8 text-rose-500 dark:text-rose-455" />
               </div>
               <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus Aplikasi?</h3>
               <p className="mt-2 text-sm text-slate-550 dark:text-slate-400 font-bold leading-relaxed">

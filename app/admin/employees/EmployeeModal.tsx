@@ -4,6 +4,7 @@ import React from 'react';
 import { X, Building2, Pencil, Plus, Loader2, User } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect } from '@/components/ui/SearchSelect';
+import { CustomDatePicker } from '@/components/ui/CustomDatePicker';
 import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid';
 import { EmployeeData, FormDataState, UnitOrganisasi, JenisKelamin } from './types';
 import { inputCls, labelCls } from '@/admin/master/components/shared';
@@ -61,12 +62,9 @@ export function EmployeeModal({
       <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-xl animate-fade-up">
           <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/60 to-transparent" />
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20">
-                  {editTarget ? <Pencil className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> : <Plus className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />}
-                </div>
+                {editTarget ? <Pencil className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> : <Plus className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />}
                 <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">{editTarget ? 'Edit Data Employee' : 'Tambah Employee Baru'}</h2>
               </div>
               <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-330 transition-all cursor-pointer focus:outline-none">
@@ -162,13 +160,23 @@ export function EmployeeModal({
                 </div>
                 <div>
                   <label className={labelCls}>Tanggal Lahir</label>
-                  <input type="date" value={form.tanggalLahir} onChange={e => setForm(f => ({ ...f, tanggalLahir: e.target.value }))} className={`${inputCls} ${errors.tanggalLahir ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
+                  <CustomDatePicker
+                    value={form.tanggalLahir}
+                    onChange={val => setForm(f => ({ ...f, tanggalLahir: val }))}
+                    placeholder="- Pilih Tanggal Lahir -"
+                    error={!!errors.tanggalLahir}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Tanggal Masuk Kerja</label>
-                  <input type="date" value={form.tanggalMasuk} onChange={e => setForm(f => ({ ...f, tanggalMasuk: e.target.value }))} className={`${inputCls} ${errors.tanggalMasuk ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`} />
+                  <CustomDatePicker
+                    value={form.tanggalMasuk}
+                    onChange={val => setForm(f => ({ ...f, tanggalMasuk: val }))}
+                    placeholder="- Pilih Tanggal Masuk Kerja -"
+                    error={!!errors.tanggalMasuk}
+                  />
                 </div>
                 <div>
                   <label className={labelCls}>Status</label>
@@ -201,6 +209,7 @@ export function EmployeeModal({
                     value={form.gradeId}
                     onChange={val => setForm(f => ({ ...f, gradeId: val }))}
                     placeholder="- Pilih Grade -"
+                    error={!!errors.gradeId}
                   />
                 </div>
                 <div>
@@ -217,6 +226,7 @@ export function EmployeeModal({
                     value={form.statusKaryawanId}
                     onChange={val => setForm(f => ({ ...f, statusKaryawanId: val }))}
                     placeholder="- Pilih Status -"
+                    error={!!errors.statusKaryawanId}
                   />
                 </div>
               </div>
@@ -237,6 +247,7 @@ export function EmployeeModal({
                     value={form.pendidikanTerakhirId}
                     onChange={val => setForm(f => ({ ...f, pendidikanTerakhirId: val }))}
                     placeholder="- Pilih Pendidikan -"
+                    error={!!errors.pendidikanTerakhirId}
                   />
                 </div>
                 <div>
@@ -253,6 +264,7 @@ export function EmployeeModal({
                     value={form.statusPernikahanId}
                     onChange={val => setForm(f => ({ ...f, statusPernikahanId: val }))}
                     placeholder="- Pilih Status -"
+                    error={!!errors.statusPernikahanId}
                   />
                 </div>
                 <div>
@@ -269,6 +281,26 @@ export function EmployeeModal({
                     value={form.penempatanAreaId}
                     onChange={val => setForm(f => ({ ...f, penempatanAreaId: val }))}
                     placeholder="- Pilih Penempatan -"
+                    error={!!errors.penempatanAreaId}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Agama</label>
+                  <SearchSelect
+                    searchable={false}
+                    options={[
+                      { value: '', label: '- Pilih Agama -' },
+                      { value: 'Islam', label: 'Islam' },
+                      { value: 'Kristen Protestan', label: 'Kristen Protestan' },
+                      { value: 'Katolik', label: 'Katolik' },
+                      { value: 'Hindu', label: 'Hindu' },
+                      { value: 'Buddha', label: 'Buddha' },
+                      { value: 'Khonghucu', label: 'Khonghucu' }
+                    ]}
+                    value={form.agama}
+                    onChange={val => setForm(f => ({ ...f, agama: val }))}
+                    placeholder="- Pilih Agama -"
+                    error={!!errors.agama}
                   />
                 </div>
               </div>

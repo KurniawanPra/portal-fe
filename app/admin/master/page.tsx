@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Building2, Briefcase, GraduationCap, Heart, MapPin, Layers
+  Building2, Briefcase, GraduationCap, Heart, MapPin, Layers, BookOpen,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import TabStatusKaryawan from './components/TabStatusKaryawan';
 import TabGrade from './components/TabGrade';
@@ -11,6 +12,7 @@ import TabPendidikan from './components/TabPendidikan';
 import TabStatusNikah from './components/TabStatusNikah';
 import TabPenempatanArea from './components/TabPenempatanArea';
 import TabKategoriAplikasi from './components/TabKategoriAplikasi';
+import TabAgama from './components/TabAgama';
 
 // ─── TABS CONFIG ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -70,12 +72,48 @@ const TABS = [
     accentBg: 'bg-slate-50 dark:bg-slate-800',
     Component: TabKategoriAplikasi
   },
+  {
+    id: 'agama',
+    label: 'Agama',
+    icon: BookOpen,
+    accentText: 'text-slate-900 dark:text-white',
+    accentBg: 'bg-slate-50 dark:bg-slate-800',
+    Component: TabAgama
+  },
 ];
 
 export default function MasterDataPage() {
   const [activeTab, setActiveTab] = useState('status-kary');
+  const [canScrollLeft, setCanScrollLeft]   = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const activeTabObj = TABS.find(t => t.id === activeTab) || TABS[0];
   const ActiveComponent = activeTabObj.Component;
+
+  const updateScrollState = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState, { passive: true });
+    const ro = new ResizeObserver(updateScrollState);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', updateScrollState);
+      ro.disconnect();
+    };
+  }, [updateScrollState]);
+
+  const scrollBy = (dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'right' ? 200 : -200, behavior: 'smooth' });
+  };
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -90,8 +128,32 @@ export default function MasterDataPage() {
       </div>
 
       {/* Tab Bar */}
-      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
-        <div className="flex overflow-x-auto">
+      <div className="relative overflow-hidden rounded-xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-[#0f1623] shadow-sm">
+
+        {/* Left transparent scroll button */}
+        {canScrollLeft && (
+          <button
+            onClick={() => scrollBy('left')}
+            className="absolute left-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-r from-white/90 to-white/10 dark:from-[#0f1623]/90 dark:to-[#0f1623]/10 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer focus:outline-none"
+            aria-label="Scroll tab ke kiri"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        )}
+
+        {/* Right transparent scroll button */}
+        {canScrollRight && (
+          <button
+            onClick={() => scrollBy('right')}
+            className="absolute right-0 top-0 bottom-0 z-20 flex items-center justify-center w-8 bg-gradient-to-l from-white/90 to-white/10 dark:from-[#0f1623]/90 dark:to-[#0f1623]/10 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition-colors cursor-pointer focus:outline-none"
+            aria-label="Scroll tab ke kanan"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        )}
+
+        {/* Scrollable tab list */}
+        <div ref={scrollRef} className="flex overflow-x-auto hide-scrollbar">
           {TABS.map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -99,10 +161,10 @@ export default function MasterDataPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold whitespace-nowrap transition-colors duration-150 cursor-pointer focus:outline-none border-b-2 ${
+                className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer focus:outline-none border-b-2 ${
                   isActive
-                    ? `border-slate-900 dark:border-slate-100 ${tab.accentText} ${tab.accentBg}`
-                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/5 dark:bg-amber-500/10'
+                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
                 }`}
               >
                 <Icon className="h-3.5 w-3.5" />

@@ -22,6 +22,7 @@ export interface EmployeeData {
   statusPernikahanId: string;
   penempatanAreaId: string;
   fotoProfil: string;
+  agama?: string | null;
   atasanId?: string;
   atasanNama?: string;
 }
@@ -54,4 +55,5 @@ export interface FormDataState {
   statusPernikahanId: string;
   penempatanAreaId: string;
   atasanId: string;
+  agama: string;
 }

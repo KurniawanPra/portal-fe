@@ -84,7 +84,7 @@ export function SearchSelect({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0d1218] px-3.5 py-2.5 text-xs text-left font-semibold text-slate-800 dark:text-slate-250 flex items-center justify-between cursor-pointer focus:outline-none focus:border-amber-500/50 dark:focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[42px]",
+          "w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0d1218] px-3.5 py-2.5 text-xs text-left font-semibold text-slate-800 dark:text-white flex items-center justify-between cursor-pointer focus:outline-none focus:border-amber-500/50 dark:focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[42px]",
           error && "border-rose-500 dark:border-rose-500/50 focus:border-rose-500",
           isOpen && "border-amber-500/50 dark:focus:border-amber-500/50"
         )}
@@ -139,7 +139,7 @@ export function SearchSelect({
                       "w-full text-left rounded-xl px-3 py-2 text-xs transition-all duration-150 flex flex-col gap-0.5 hover:bg-slate-50 dark:hover:bg-white/[0.03] cursor-pointer",
                       isSelected
                         ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border-l-2 border-amber-500 pl-2.5 rounded-l-none"
-                        : "text-slate-700 dark:text-slate-300"
+                        : "text-slate-700 dark:text-white"
                     )}
                   >
                     <span className="truncate">{opt.label}</span>

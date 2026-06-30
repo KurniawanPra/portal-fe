@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  ToggleLeft, ToggleRight, Search, Plus, Loader2, X, ChevronDown
+  ToggleLeft, ToggleRight, Search, Plus, Loader2, X, ChevronDown, CheckCircle2, AlertCircle, Pencil, Trash2
 } from 'lucide-react';
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
 import { ModalPortal } from '@/components/ui/ModalPortal';
@@ -17,11 +17,81 @@ export const labelCls = 'mb-1 block text-[10px] font-bold uppercase tracking-wid
 export function Toast({ toast }: { toast: { type: 'ok' | 'err'; text: string } | null }) {
   if (!toast) return null;
   return (
-    <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-lg backdrop-blur-xl animate-fade-up ${toast.type === 'ok' ? 'bg-emerald-50/10 border-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-rose-50/10 border-rose-500/10 text-rose-700 dark:text-rose-400'}`}>
-      <span className="shrink-0 text-xs">
-        {toast.type === 'ok' ? '✓' : '⚠️'}
-      </span>
+    <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${
+      toast.type === 'ok'
+        ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300'
+        : 'bg-[#1a0f10]/95 border-rose-500/30    text-rose-300'
+    }`}>
+      {toast.type === 'ok' ? (
+        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+      ) : (
+        <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />
+      )}
       {toast.text}
+    </div>
+  );
+}
+
+// ─── Search Input component ───────────────────────────────────────────────────
+export function SearchInput({
+  placeholder = 'Cari...',
+  value,
+  onChange,
+  className = '',
+}: {
+  placeholder?: string;
+  value: string;
+  onChange: (v: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("relative w-full sm:w-72", className)}>
+      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className={inputCls}
+      />
+    </div>
+  );
+}
+
+// ─── Table Actions component (Edit & Delete) ──────────────────────────────────
+export function TableActions({
+  onEdit,
+  onDelete,
+  editDisabled = false,
+  deleteDisabled = false,
+}: {
+  onEdit?: () => void;
+  onDelete?: () => void;
+  editDisabled?: boolean;
+  deleteDisabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      {onEdit && (
+        <button
+          type="button"
+          disabled={editDisabled}
+          onClick={onEdit}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-450 transition-all cursor-pointer focus:outline-none disabled:opacity-50"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {onDelete && (
+        <button
+          type="button"
+          disabled={deleteDisabled}
+          onClick={onDelete}
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-450 transition-all cursor-pointer focus:outline-none disabled:opacity-50"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -341,5 +411,57 @@ export function FormModal({
         </div>
       </div>
     </ModalPortal>
+  );
+}
+
+// ─── Secondary Button ──────────────────────────────────────────────────────────
+export function SecondaryButton({
+  onClick,
+  children,
+  disabled,
+  type = 'button',
+  className = '',
+}: {
+  onClick?: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  type?: 'button' | 'submit';
+  className?: string;
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`cursor-pointer rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// ─── Danger Button ─────────────────────────────────────────────────────────────
+export function DangerButton({
+  onClick,
+  children,
+  disabled,
+  type = 'button',
+  className = '',
+}: {
+  onClick?: () => void;
+  children: React.ReactNode;
+  disabled?: boolean;
+  type?: 'button' | 'submit';
+  className?: string;
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`cursor-pointer rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-all shadow-lg shadow-rose-500/20 flex items-center justify-center gap-1.5 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
+    >
+      {children}
+    </button>
   );
 }

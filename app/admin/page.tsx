@@ -7,8 +7,9 @@ import {
   LayoutGrid, Users, Shield, TrendingUp, AlertTriangle,
   CheckCircle2, Activity, Zap, Lock, ChevronLeft, ChevronRight,
   CalendarDays, BarChart3, ArrowUpRight, Search, Globe, Database,
-  HardDrive, Cpu
+  HardDrive, Cpu, X
 } from 'lucide-react';
+import { ModalPortal } from '@/components/ui/ModalPortal';
 
 // ─── Animated Counter ─────────────────────────────────────────────────────────
 function AnimatedCounter({ to, duration = 1000 }: { to: number; duration?: number }) {
@@ -308,6 +309,7 @@ export default function AdminPage() {
   const [debouncedSearch, setDebouncedSearch] = useState<string>('');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
+  const [selectedLog, setSelectedLog] = useState<any>(null);
 
   // Debounce search query
   useEffect(() => {
@@ -488,6 +490,7 @@ export default function AdminPage() {
             bg,
             text,
             time: relativeTime,
+            raw: log,
           };
         });
 
@@ -607,9 +610,9 @@ export default function AdminPage() {
       </div>
 
       {/* Activity + System Status */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 items-start">
+      <div className="grid grid-cols-1 gap-6">
         {/* Activity Log */}
-        <div className="lg:col-span-2 rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden flex flex-col justify-between">
+        <div className="rounded-xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-slate-900 shadow-sm overflow-visible relative z-20 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800/80">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
@@ -679,15 +682,23 @@ export default function AdminPage() {
                 </div>
               ) : (
                 logs.map((log, i) => {
-                  const Icon = log.icon;
                   return (
-                    <div key={i} className="flex items-start gap-3.5 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                      <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border ${log.bg} mt-0.5`}>
-                        <Icon className={`h-3 w-3 ${log.color}`} />
+                    <div key={i} className="flex items-center justify-between gap-3.5 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 mt-[7px] ${log.color.replace('text-', 'bg-')}`} />
+                        <div className="min-w-0 text-xs">
+                          <p className="font-medium text-slate-700 dark:text-slate-300 leading-snug truncate sm:whitespace-normal">{log.text}</p>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1">{log.time}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0 text-xs">
-                        <p className="font-medium text-slate-700 dark:text-slate-300 leading-snug">{log.text}</p>
-                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1">{log.time}</p>
+                      <div className="shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedLog(log)}
+                          className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 bg-white dark:bg-slate-900 text-[10px] font-bold text-slate-650 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-850 transition-all cursor-pointer"
+                        >
+                          Detail
+                        </button>
                       </div>
                     </div>
                   );
@@ -697,7 +708,7 @@ export default function AdminPage() {
           </div>
 
           {/* Pagination */}
-          {!loadingLogs && totalPages > 1 && (
+          {!loadingLogs && totalLogs > 0 && (
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/10 dark:bg-transparent">
               <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
                 Menampilkan {Math.min((currentPage - 1) * limit + 1, totalLogs)} - {Math.min(currentPage * limit, totalLogs)} dari {totalLogs} entri
@@ -799,7 +810,7 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div className="relative z-10 p-5 space-y-4">
+          <div className="relative z-10 p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 space-y-0">
             {[
               {
                 key: 'domain',
@@ -946,8 +957,77 @@ export default function AdminPage() {
               );
             })}
           </div>
-        </div>
       </div>
+
+      {/* Detail Modal */}
+      <ModalPortal open={!!selectedLog}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white dark:bg-[#0c1017] p-5 shadow-2xl space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-850 pb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="h-4 w-4 text-amber-500" />
+                Detail Log Aktivitas
+              </h3>
+              <button
+                onClick={() => setSelectedLog(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-850 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {selectedLog && (
+              <div className="space-y-3.5 text-xs text-slate-700 dark:text-slate-350">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">Pengguna</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100 bg-slate-50/50 dark:bg-slate-950/40 px-2.5 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-850">
+                    {selectedLog.raw.email}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">Kategori Aksi</span>
+                  <span className="font-mono text-[11px] font-semibold text-slate-900 dark:text-slate-200 bg-slate-50/50 dark:bg-slate-955/40 px-2.5 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-850">
+                    {selectedLog.raw.action}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">Waktu Lengkap</span>
+                  <span className="font-semibold text-slate-850 dark:text-slate-250 bg-slate-50/50 dark:bg-slate-955/40 px-2.5 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-850">
+                    {new Date(selectedLog.raw.createdAt).toLocaleString('id-ID', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-mono">Deskripsi Detail</span>
+                  <div className="font-medium text-slate-800 dark:text-slate-250 bg-slate-50/50 dark:bg-slate-955/40 px-2.5 py-2.5 rounded-lg border border-slate-200/50 dark:border-slate-850 leading-relaxed whitespace-pre-wrap">
+                    {selectedLog.raw.details}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-850 bg-white dark:bg-slate-900 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-50 hover:text-slate-900 dark:hover:bg-slate-850 dark:hover:text-slate-100 transition-all cursor-pointer focus:outline-none"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      </ModalPortal>
+    </div>
     </div>
   );
 }

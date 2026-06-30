@@ -481,7 +481,6 @@ export default function UnitOrganisasiPage() {
         <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
           <div className="pointer-events-auto w-full max-w-md animate-fade-up">
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
                 <h2 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                   <GitBranch className="h-4 w-4 text-amber-550 dark:text-amber-400" />

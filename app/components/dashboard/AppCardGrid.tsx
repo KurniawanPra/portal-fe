@@ -23,11 +23,14 @@ interface Aplikasi {
   deskripsi: string;
   urutan: number;
   is_active: boolean;
+  kategori?: string;
 }
 
 interface AppCardGridProps {
   apps: Aplikasi[];
   searchQuery: string;
+  showUuid?: boolean;
+  columns?: 3 | 4;
 }
 
 // Icon mapping for Standard Lucide icons
@@ -41,15 +44,15 @@ const iconMap: Record<string, React.ComponentType<LucideProps>> = {
   ShoppingBag: ShoppingBag,
 };
 
-// Returns a beautiful iOS App Store style icon squircle container
+// Returns a beautiful iOS App Store style icon container (no background, no border)
 function AppIcon({ name }: { name: string }) {
-  const containerClass = "h-16 w-16 shrink-0 flex items-center justify-center transition-transform duration-300 bg-transparent";
+  const containerClass = "h-24 w-24 shrink-0 flex items-center justify-center transition-transform duration-300 bg-transparent";
 
   switch (name) {
     case 'Google':
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12">
+          <svg viewBox="0 0 24 24" className="h-16 w-16">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1Z" />
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.26 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23Z" />
             <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84Z" />
@@ -60,7 +63,7 @@ function AppIcon({ name }: { name: string }) {
     case 'YouTube':
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12" fill="#FF0000">
+          <svg viewBox="0 0 24 24" className="h-16 w-16" fill="#FF0000">
             <path d="M23.498 6.163a3.003 3.003 0 0 0-2.11-2.11C19.517 3.545 12 3.545 12 3.545s-7.516 0-9.387.507a3.003 3.003 0 0 0-2.11 2.11C0 8.033 0 12 0 12s0 3.967.502 5.837a3.003 3.003 0 0 0 2.11 2.11c1.871.507 9.387.507 9.387.507s7.517 0 9.387-.507a3.003 3.003 0 0 0 2.11-2.11C24 15.967 24 12 24 12s0-3.967-.502-5.837Z" />
             <path d="M9.545 15.568V8.432L15.818 12l-6.273 3.568Z" fill="currentColor" className="text-white dark:text-slate-900" />
           </svg>
@@ -69,7 +72,7 @@ function AppIcon({ name }: { name: string }) {
     case 'Facebook':
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12" fill="#1877F2">
+          <svg viewBox="0 0 24 24" className="h-16 w-16" fill="#1877F2">
             <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
           </svg>
         </div>
@@ -77,7 +80,7 @@ function AppIcon({ name }: { name: string }) {
     case 'MLBB': // Mobile Legends
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" className="h-16 w-16" fill="none" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z" fill="#F59E0B" fillOpacity="0.2"/>
             <path d="M3 20h18" strokeWidth="3" />
           </svg>
@@ -86,7 +89,7 @@ function AppIcon({ name }: { name: string }) {
     case 'PUBG': // PUBG Mobile
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" className="h-16 w-16" fill="none" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <circle cx="12" cy="12" r="6" />
             <circle cx="12" cy="12" r="2" fill="#F97316" />
@@ -97,7 +100,7 @@ function AppIcon({ name }: { name: string }) {
     case 'Valorant': // Valorant
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12">
+          <svg viewBox="0 0 24 24" className="h-16 w-16">
             <path fill="#FF4655" d="M3 3h6.5l7.5 18H10.5L3 3z" />
             <path fill="#FF4655" d="M21 3h-6.5l-3.5 8.5h6.5L21 3z" />
           </svg>
@@ -106,7 +109,7 @@ function AppIcon({ name }: { name: string }) {
     case 'Genshin': // Genshin Impact
       return (
         <div className={containerClass}>
-          <svg viewBox="0 0 24 24" className="h-12 w-12" fill="none" stroke="#06B6D4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg viewBox="0 0 24 24" className="h-16 w-16" fill="none" stroke="#06B6D4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2z" fill="#06B6D4" fillOpacity="0.2" />
             <path d="M12 7l1.5 3.5L17 12l-3.5 1.5L12 17l-1.5-3.5L7 12l3.5-1.5L12 7z" fill="#E0F2FE" />
           </svg>
@@ -121,7 +124,7 @@ function AppIcon({ name }: { name: string }) {
             <img
               src={srcUrl}
               alt="Icon"
-              className="h-12 w-12 rounded-xl object-contain shrink-0 border border-slate-100 dark:border-white/[0.08]"
+              className="h-20 w-20 object-contain shrink-0"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
@@ -132,22 +135,15 @@ function AppIcon({ name }: { name: string }) {
       const IconComponent = iconMap[name] || HelpCircle;
       return (
         <div className={`${containerClass} text-slate-500 dark:text-slate-400`}>
-          <IconComponent className="h-12 w-12" />
+          <IconComponent className="h-16 w-16" />
         </div>
       );
   }
 }
 
 // Maps application titles to realistic developer names and categories
-const getSubInfo = (appName: string) => {
-  if (appName.includes('Google')) return 'Google LLC • Produktivitas';
-  if (appName.includes('YouTube')) return 'YouTube, LLC • Hiburan';
-  if (appName.includes('Facebook')) return 'Meta Platforms • Sosial';
-  if (appName.includes('Mobile Legends') || appName.includes('MLBB')) return 'Moonton • Game MOBA';
-  if (appName.includes('PUBG')) return 'Tencent Games • Battle Royale';
-  if (appName.includes('Valorant')) return 'Riot Games • FPS Taktis';
-  if (appName.includes('Genshin')) return 'HoYoverse • Open-World RPG';
-  return 'Game Online Terpopuler';
+const getSubInfo = (app: Aplikasi) => {
+  return app.kategori || 'Lainnya';
 };
 
 // Generates app-specific brand action colors for the BUKA button
@@ -214,7 +210,7 @@ const getAuthBadgeClass = (appName: string, authMode: string) => {
   }
 };
 
-export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
+export default function AppCardGrid({ apps, searchQuery, showUuid = false, columns = 3 }: AppCardGridProps) {
   // Filter and sort apps by sequence (urutan)
   const filteredApps = apps
     .filter(
@@ -260,35 +256,40 @@ export default function AppCardGrid({ apps, searchQuery }: AppCardGridProps) {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3 items-start">
+        <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${columns === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} items-start`}>
           {filteredApps.map((app, index) => (
             <div
               key={app.id}
               style={{ animationDelay: `${index * 75}ms` }}
-              className="group perspective-1000 min-h-[10rem] w-full animate-fade-up fill-mode-both"
+              className="group perspective-1000 min-h-[12rem] w-full animate-fade-up fill-mode-both"
             >
               {/* Inner 3D Container */}
               <div className="relative w-full rounded-3xl transition-transform duration-500 preserve-3d group-hover:[transform:rotateY(180deg)]">
                 
                 {/* Front Face: App Store Style Icon & Application Name */}
-                <div className="absolute inset-0 w-full h-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white/70 dark:bg-[#161b26]/70 backdrop-blur-xl shadow-sm flex flex-col items-center justify-center p-4 backface-hidden">
+                <div className="absolute inset-0 w-full h-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white/70 dark:bg-[#161b26]/70 backdrop-blur-xl shadow-sm flex flex-col items-center justify-center p-5 backface-hidden">
                   <AppIcon name={app.icon} />
-                  <span className="mt-2.5 text-xs sm:text-sm font-extrabold tracking-tight text-slate-800 dark:text-slate-200 text-center truncate w-full px-2">
+                  <span className="mt-3 text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-200 text-center truncate w-full px-2">
                     {app.nama}
                   </span>
                 </div>
 
                 {/* Back Face: Redesigned Layout with Header, Body, and Footer */}
-                <div className="relative w-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-[#131924]/95 backdrop-blur-xl shadow-lg p-4 flex flex-col justify-between backface-hidden rotate-y-180 min-h-[10rem] gap-2">
+                <div className="relative w-full rounded-3xl border border-slate-200 dark:border-slate-800/35 bg-white dark:bg-[#131924]/95 backdrop-blur-xl shadow-lg p-5 flex flex-col justify-between backface-hidden rotate-y-180 min-h-[12rem] gap-2">
                   
                   {/* 1. Header (Full Width Title and Subtitle) */}
                   <div className="min-w-0">
-                    <h3 className="truncate text-sm sm:text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                    <h3 className="truncate text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
                       {app.nama}
                     </h3>
                     <span className="block text-[9.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wide mt-0.5 truncate">
-                      {getSubInfo(app.nama)}
+                      {getSubInfo(app)}
                     </span>
+                    {showUuid && (
+                      <span className="block text-[8px] font-mono text-slate-350 dark:text-slate-600 mt-1 truncate select-all" title={app.id}>
+                        {app.id}
+                      </span>
+                    )}
                   </div>
 
                   {/* 2. Body (Description) */}
