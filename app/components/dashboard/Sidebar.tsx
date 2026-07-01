@@ -50,10 +50,17 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           asChild
           tooltip={item.label}
           className={cn(
-            'border-l-2 pl-3 transition-all duration-200 ease-out',
+            'transition-all duration-200 ease-out',
+            state === 'expanded' ? 'border-l-2 pl-3' : 'justify-center border-l-0 pl-0',
             isActive
-              ? 'border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/15 font-bold rounded-r-xl rounded-l-none'
-              : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/20 hover:text-slate-900 dark:hover:text-white rounded-xl'
+              ? cn(
+                  'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/15 font-bold',
+                  state === 'expanded' ? 'border-amber-500 rounded-r-xl rounded-l-none' : 'rounded-xl'
+                )
+              : cn(
+                  'text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-800/20 hover:text-slate-900 dark:hover:text-white rounded-xl',
+                  state === 'expanded' ? 'border-transparent' : ''
+                )
           )}
         >
           <Link href={item.path} className="flex items-center w-full">
@@ -74,8 +81,8 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
       {/* Brand Header */}
       <SidebarHeader>
         <div className={cn(
-          'flex items-center gap-3 transition-all duration-300',
-          state === 'collapsed' ? 'justify-center p-0' : 'px-2 py-1.5'
+          'flex items-center transition-all duration-300',
+          state === 'collapsed' ? 'justify-center p-0 gap-0' : 'px-2 py-1.5 gap-3'
         )}>
           <Image
             src="/img/logo.png"
@@ -110,7 +117,10 @@ export default function Sidebar({ employee, onLogout }: SidebarProps) {
           'flex items-center w-full gap-3 p-1 rounded-2xl border border-white/40 dark:border-slate-850/40 bg-white/20 dark:bg-[#161b26]/30 shadow-sm',
           state === 'collapsed' ? 'flex-col justify-center py-3 px-1' : 'justify-between px-3 py-2.5'
         )}>
-          <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className={cn(
+            'flex items-center gap-2.5 overflow-hidden',
+            state === 'collapsed' ? 'justify-center w-full' : 'w-auto'
+          )}>
             {employee.foto_profil ? (
               <img
                 src={resolveImageUrl(employee.foto_profil)}

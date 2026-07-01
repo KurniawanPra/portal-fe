@@ -11,7 +11,7 @@ import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid'
 import { api, ApiRequestError } from '@/lib/api';
 import { DeleteConfirmModal } from '@/components/ui/DeleteConfirmModal';
 import {
-  inputCls, labelCls, Toast, TableCard, ActiveToggle, PrimaryButton, FilterDropdown
+  inputCls, searchInputCls, labelCls, Toast, TableCard, ActiveToggle, PrimaryButton, FilterDropdown
 } from '@/admin/master/components/shared';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ export default function UnitOrganisasiPage() {
         <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-            <input type="text" placeholder="Cari nama atau kode unit..." value={search} onChange={e => setSearch(e.target.value)} className={`${inputCls} pl-10`} />
+            <input type="text" placeholder="Cari nama atau kode unit..." value={search} onChange={e => setSearch(e.target.value)} className={`${searchInputCls} pl-10`} />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">

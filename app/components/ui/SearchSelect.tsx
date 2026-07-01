@@ -84,7 +84,7 @@ export function SearchSelect({
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
-          "w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0d1218] px-3.5 py-2.5 text-xs text-left font-semibold text-slate-800 dark:text-white flex items-center justify-between cursor-pointer focus:outline-none focus:border-amber-500/50 dark:focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[42px]",
+          "w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] px-3.5 py-2.5 text-xs text-left font-semibold text-slate-800 dark:text-white flex items-center justify-between cursor-pointer focus:outline-none focus:border-amber-500/50 dark:focus:border-amber-500/50 disabled:opacity-50 disabled:cursor-not-allowed min-h-[42px]",
           error && "border-rose-500 dark:border-rose-500/50 focus:border-rose-500",
           isOpen && "border-amber-500/50 dark:focus:border-amber-500/50"
         )}
@@ -107,7 +107,7 @@ export function SearchSelect({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Cari..."
-                className="w-full rounded-xl border border-slate-250 dark:border-white/[0.08] bg-slate-50 dark:bg-[#070b12] py-2 pl-9 pr-8 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500/50 focus:bg-white dark:focus:bg-[#0a0f1a]"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#070b12] py-2 pl-9 pr-8 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500/50 focus:bg-white dark:focus:bg-[#0a0f1a]"
                 autoFocus
               />
               {searchTerm && (

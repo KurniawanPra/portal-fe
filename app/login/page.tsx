@@ -49,18 +49,7 @@ export default function LoginPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [is3dHovered, setIs3dHovered] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [audioSrc, setAudioSrc] = useState('/audio/lagu-login.mp3');
-
-  React.useEffect(() => {
-    fetch('/api/login-songs/active')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.data && data.data.filename) {
-          setAudioSrc(`/audio/${data.data.filename}`);
-        }
-      })
-      .catch((err) => console.log('Failed to fetch active login song:', err));
-  }, []);
+  const audioSrc = '/audio/indonesia-raya.mp3';
 
   React.useEffect(() => {
     if (audioRef.current) {

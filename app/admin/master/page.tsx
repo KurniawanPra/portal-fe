@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Building2, Briefcase, GraduationCap, Heart, MapPin, Layers, BookOpen,
-  ChevronLeft, ChevronRight, Music
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import TabStatusKaryawan from './components/TabStatusKaryawan';
 import TabGrade from './components/TabGrade';
@@ -13,7 +13,6 @@ import TabStatusNikah from './components/TabStatusNikah';
 import TabPenempatanArea from './components/TabPenempatanArea';
 import TabKategoriAplikasi from './components/TabKategoriAplikasi';
 import TabAgama from './components/TabAgama';
-import TabLaguLogin from './components/TabLaguLogin';
 
 // ─── TABS CONFIG ───────────────────────────────────────────────────────────────
 const TABS = [
@@ -80,14 +79,6 @@ const TABS = [
     accentText: 'text-slate-900 dark:text-white',
     accentBg: 'bg-slate-50 dark:bg-slate-800',
     Component: TabAgama
-  },
-  {
-    id: 'lagu-login',
-    label: 'Lagu Login',
-    icon: Music,
-    accentText: 'text-slate-900 dark:text-white',
-    accentBg: 'bg-slate-50 dark:bg-slate-800',
-    Component: TabLaguLogin
   },
 ];
 

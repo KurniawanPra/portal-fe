@@ -200,29 +200,58 @@ SidebarInset.displayName = 'SidebarInset';
 export const SidebarHeader = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('flex flex-col gap-2 p-4 border-b border-slate-100 dark:border-slate-800/30', className)} {...props} />
-));
+>(({ className, ...props }, ref) => {
+  const { state } = useSidebar();
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'flex flex-col gap-2 border-b border-slate-100 dark:border-slate-800/30 transition-all duration-300',
+        state === 'collapsed' ? 'p-2' : 'p-4',
+        className
+      )}
+      {...props}
+    />
+  );
+});
 SidebarHeader.displayName = 'SidebarHeader';
 
 export const SidebarContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn('flex flex-1 flex-col gap-1 overflow-y-auto p-4', className)}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const { state } = useSidebar();
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'flex flex-1 flex-col gap-1 overflow-y-auto transition-all duration-300',
+        state === 'collapsed' ? 'p-2' : 'p-4',
+        className
+      )}
+      {...props}
+    />
+  );
+});
 SidebarContent.displayName = 'SidebarContent';
 
 export const SidebarFooter = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn('flex flex-col gap-2 p-4 border-t border-slate-100 dark:border-slate-800/30 bg-slate-50/10 dark:bg-[#0e1118]/10', className)} {...props} />
-));
+>(({ className, ...props }, ref) => {
+  const { state } = useSidebar();
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        'flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800/30 bg-slate-50/10 dark:bg-[#0e1118]/10 transition-all duration-300',
+        state === 'collapsed' ? 'p-2' : 'p-4',
+        className
+      )}
+      {...props}
+    />
+  );
+});
 SidebarFooter.displayName = 'SidebarFooter';
 
 export const SidebarRail = React.forwardRef<

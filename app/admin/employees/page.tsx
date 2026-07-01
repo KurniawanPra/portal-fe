@@ -5,7 +5,7 @@ import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Phone, MapPin, Briefcase, Building2, UserCheck, UserX,
   IdCard, Loader2, ChevronDown, User, FileSpreadsheet, FileUp, FileDown, Download,
-  UserPlus, UserCog
+  UserPlus, UserCog, SlidersHorizontal, Calendar
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect } from '@/components/ui/SearchSelect';
@@ -286,13 +286,21 @@ export default function ManajemenEmployeePage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'Semua' | 'Aktif' | 'Non-Aktif'>('Semua');
   const [filterGender, setFilterGender] = useState<'Semua' | 'L' | 'P'>('Semua');
+  const [filterUnit, setFilterUnit] = useState<string>('Semua');
+  const [filterPenempatan, setFilterPenempatan] = useState<string>('Semua');
+  const [filterStatusKaryawan, setFilterStatusKaryawan] = useState<string>('Semua');
+  const [filterStatusPernikahan, setFilterStatusPernikahan] = useState<string>('Semua');
+  const [filterAkunLogin, setFilterAkunLogin] = useState<'Semua' | 'Ada' | 'Tidak Ada'>('Semua');
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+  const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const importItemsPerPage = 8;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, filterStatus, filterGender]);
+  }, [search, filterStatus, filterGender, filterUnit, filterPenempatan, filterStatusKaryawan, filterStatusPernikahan, filterAkunLogin, filterDateFrom, filterDateTo]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<EmployeeData | null>(null);
@@ -442,16 +450,55 @@ export default function ManajemenEmployeePage() {
     fetchData();
   }, [fetchData]);
 
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (filterGender !== 'Semua') count++;
+    if (filterUnit !== 'Semua') count++;
+    if (filterPenempatan !== 'Semua') count++;
+    if (filterStatusKaryawan !== 'Semua') count++;
+    if (filterStatusPernikahan !== 'Semua') count++;
+    if (filterAkunLogin !== 'Semua') count++;
+    if (filterDateFrom) count++;
+    if (filterDateTo) count++;
+    return count;
+  }, [filterGender, filterUnit, filterPenempatan, filterStatusKaryawan, filterStatusPernikahan, filterAkunLogin, filterDateFrom, filterDateTo]);
+
+  const resetAdvancedFilters = useCallback(() => {
+    setFilterGender('Semua');
+    setFilterUnit('Semua');
+    setFilterPenempatan('Semua');
+    setFilterStatusKaryawan('Semua');
+    setFilterStatusPernikahan('Semua');
+    setFilterAkunLogin('Semua');
+    setFilterDateFrom('');
+    setFilterDateTo('');
+  }, []);
+
   // ─── Filtering ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     return employees.filter(e => {
       const q = search.toLowerCase();
-      const matchSearch = e.nama.toLowerCase().includes(q) || e.nrk.toLowerCase().includes(q) || e.nik.includes(q) || e.jabatan.toLowerCase().includes(q);
+      const matchSearch = !q ||
+        e.nama.toLowerCase().includes(q) ||
+        e.nrk.toLowerCase().includes(q) ||
+        e.nik.includes(q) ||
+        e.jabatan.toLowerCase().includes(q);
       const matchStatus = filterStatus === 'Semua' || (filterStatus === 'Aktif' ? e.isActive : !e.isActive);
       const matchGender = filterGender === 'Semua' || e.jenisKelamin === filterGender;
-      return matchSearch && matchStatus && matchGender;
+      const matchUnit = filterUnit === 'Semua' || e.unitOrganisasiId === filterUnit;
+      const matchPenempatan = filterPenempatan === 'Semua' || e.penempatanAreaId === filterPenempatan;
+      const matchStatusKaryawan = filterStatusKaryawan === 'Semua' || e.statusKaryawanId === filterStatusKaryawan;
+      const matchStatusPernikahan = filterStatusPernikahan === 'Semua' || e.statusPernikahanId === filterStatusPernikahan;
+      const matchAkunLogin =
+        filterAkunLogin === 'Semua' ||
+        (filterAkunLogin === 'Ada' ? !!e.userId : !e.userId);
+      const tgl = e.tanggalMasuk ? e.tanggalMasuk.slice(0, 10) : '';
+      const matchDateFrom = !filterDateFrom || (tgl >= filterDateFrom);
+      const matchDateTo = !filterDateTo || (tgl <= filterDateTo);
+      return matchSearch && matchStatus && matchGender && matchUnit && matchPenempatan && matchStatusKaryawan && matchStatusPernikahan && matchAkunLogin && matchDateFrom && matchDateTo;
     });
-  }, [employees, search, filterStatus, filterGender]);
+  }, [employees, search, filterStatus, filterGender, filterUnit, filterPenempatan, filterStatusKaryawan, filterStatusPernikahan, filterAkunLogin, filterDateFrom, filterDateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -1123,13 +1170,16 @@ export default function ManajemenEmployeePage() {
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] shadow-lg">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent" />
 
-        <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
+        {/* ── Toolbar Row 1: Search + Quick Filters ── */}
+        <div className="flex flex-col gap-3 px-5 pt-4 pb-3 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap">
           <SearchInput
             placeholder="Cari nama, NRK, NIK, jabatan..."
             value={search}
             onChange={setSearch}
+            className="sm:w-96"
           />
           <div className="flex flex-wrap items-center gap-2">
+            {/* Status Keaktifan */}
             <FilterDropdown<'Semua' | 'Aktif' | 'Non-Aktif'>
               value={filterStatus}
               onChange={setFilterStatus}
@@ -1139,18 +1189,203 @@ export default function ManajemenEmployeePage() {
                 { label: 'Non-Aktif', value: 'Non-Aktif' },
               ]}
             />
-            <div className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.08]" />
-            <FilterDropdown<'Semua' | 'L' | 'P'>
-              value={filterGender}
-              onChange={setFilterGender}
+            {/* Unit Kerja */}
+            <FilterDropdown<string>
+              value={filterUnit}
+              onChange={setFilterUnit}
+              searchable={true}
+              className="w-52"
               options={[
-                { label: 'Semua Gender', value: 'Semua' },
-                { label: 'Laki-laki', value: 'L' },
-                { label: 'Perempuan', value: 'P' },
+                { label: 'Semua Unit', value: 'Semua' },
+                ...unitOrganisasis
+                  .filter(u => u.isActive)
+                  .sort((a, b) => a.nama.localeCompare(b.nama))
+                  .map(u => ({ label: u.nama, value: u.id })),
               ]}
             />
+            <div className="h-3.5 w-px bg-slate-200 dark:bg-white/[0.08]" />
+            {/* Advanced Filters toggle + inline reset */}
+            <div className="flex items-center">
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilter(v => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer ${
+                  showAdvancedFilter
+                    ? 'border-amber-400/50 bg-amber-500/10 text-amber-700 dark:border-amber-400/30 dark:text-amber-300'
+                    : activeFiltersCount > 0
+                      ? 'border-amber-400/50 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300'
+                      : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08]'
+                } ${activeFiltersCount > 0 ? 'rounded-r-none border-r-0' : ''}`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                Filter Lanjutan
+                {activeFiltersCount > 0 && (
+                  <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[10px] font-black text-white">{activeFiltersCount}</span>
+                )}
+              </button>
+              {/* Inline reset — only visible when filters are active */}
+              {activeFiltersCount > 0 && (
+                <button
+                  type="button"
+                  onClick={e => { e.stopPropagation(); resetAdvancedFilters(); }}
+                  title="Reset semua filter lanjutan"
+                  className="inline-flex h-full items-center justify-center rounded-r-lg border border-amber-400/50 dark:border-amber-400/30 bg-amber-50 dark:bg-amber-400/10 px-2 py-1.5 text-amber-600 dark:text-amber-400 hover:bg-rose-50 hover:border-rose-300 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:border-rose-500/30 dark:hover:text-rose-400 transition-all cursor-pointer focus:outline-none"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* ── Advanced Filter Panel (collapsible) ── */}
+        {showAdvancedFilter && (
+          <div 
+            className="border-b border-amber-100 dark:border-white/[0.06] bg-amber-50/40 dark:bg-gradient-to-br dark:from-[#080d18] dark:via-[#080d18] dark:to-[#060b15] px-5 py-4"
+            style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
+          >
+            {/* Panel header */}
+            <div className="flex items-center gap-2 mb-4">
+              <SlidersHorizontal className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400/80" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-amber-600 dark:text-amber-400/80">Filter Lanjutan</span>
+              <div className="flex-1 h-px bg-amber-200/40 dark:bg-white/[0.06] ml-1" />
+              {activeFiltersCount > 0 && (
+                <span className="text-[10px] font-semibold text-amber-600 dark:text-slate-500">{activeFiltersCount} filter aktif</span>
+              )}
+            </div>
+
+            {/* Filter groups grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-4">
+
+              {/* Jenis Kelamin */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-600/70 dark:text-slate-500">Jenis Kelamin</span>
+                <FilterDropdown<'Semua' | 'L' | 'P'>
+                  value={filterGender}
+                  onChange={setFilterGender}
+                  className="w-full"
+                  options={[
+                    { label: 'Semua Gender', value: 'Semua' },
+                    { label: 'Laki-laki', value: 'L' },
+                    { label: 'Perempuan', value: 'P' },
+                  ]}
+                />
+              </div>
+
+              {/* Status Karyawan */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-600/70 dark:text-slate-500">Tipe Karyawan</span>
+                <FilterDropdown<string>
+                  value={filterStatusKaryawan}
+                  onChange={setFilterStatusKaryawan}
+                  className="w-full"
+                  options={[
+                    { label: 'Semua Tipe', value: 'Semua' },
+                    ...statusKaryawans.map(s => ({ label: s.label, value: s.id })),
+                  ]}
+                />
+              </div>
+
+              {/* Penempatan Area */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-600/70 dark:text-slate-500">Penempatan Area</span>
+                <FilterDropdown<string>
+                  value={filterPenempatan}
+                  onChange={setFilterPenempatan}
+                  className="w-full"
+                  options={[
+                    { label: 'Semua Area', value: 'Semua' },
+                    ...penempatanAreas.map(p => ({ label: p.nama, value: p.id })),
+                  ]}
+                />
+              </div>
+
+              {/* Status Pernikahan */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-600/70 dark:text-slate-500">Status Pernikahan</span>
+                <FilterDropdown<string>
+                  value={filterStatusPernikahan}
+                  onChange={setFilterStatusPernikahan}
+                  className="w-full"
+                  options={[
+                    { label: 'Semua Status', value: 'Semua' },
+                    ...statusPernikahans.map(s => ({ label: s.label, value: s.id })),
+                  ]}
+                />
+              </div>
+
+              {/* Akun Login */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-600/70 dark:text-slate-500">Akun SSO</span>
+                <FilterDropdown<'Semua' | 'Ada' | 'Tidak Ada'>
+                  value={filterAkunLogin}
+                  onChange={setFilterAkunLogin}
+                  className="w-full"
+                  options={[
+                    { label: 'Semua', value: 'Semua' },
+                    { label: 'Sudah Punya Akun', value: 'Ada' },
+                    { label: 'Belum Punya Akun', value: 'Tidak Ada' },
+                  ]}
+                />
+              </div>
+
+              {/* Tanggal Masuk range */}
+              <div className="space-y-1.5 col-span-2 md:col-span-1 xl:col-span-2">
+                <span className="text-[9px] font-black uppercase tracking-[0.12em] text-amber-600/70 dark:text-slate-500">Rentang Tanggal Masuk</span>
+                <div className="flex items-center gap-2">
+                  {/* Date From */}
+                  <div className={`flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 min-h-[42px] transition-colors ${
+                    filterDateFrom
+                      ? 'border-amber-400/50 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/[0.06]'
+                      : 'border-slate-200 bg-white dark:border-white/[0.08] dark:bg-white/[0.04]'
+                  }`}>
+                    <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600 leading-none mb-0.5">Dari</span>
+                      <input
+                        type="date"
+                        value={filterDateFrom}
+                        onChange={e => setFilterDateFrom(e.target.value)}
+                        max={filterDateTo || undefined}
+                        className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer w-full"
+                      />
+                    </div>
+                    {filterDateFrom && (
+                      <button type="button" onClick={() => setFilterDateFrom('')} className="text-slate-400 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors cursor-pointer shrink-0">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-slate-400 dark:text-slate-600 text-xs font-bold shrink-0">—</span>
+                  {/* Date To */}
+                  <div className={`flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 min-h-[42px] transition-colors ${
+                    filterDateTo
+                      ? 'border-amber-400/50 bg-amber-50 dark:border-amber-500/40 dark:bg-amber-500/[0.06]'
+                      : 'border-slate-200 bg-white dark:border-white/[0.08] dark:bg-white/[0.04]'
+                  }`}>
+                    <Calendar className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[8px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-600 leading-none mb-0.5">Sampai</span>
+                      <input
+                        type="date"
+                        value={filterDateTo}
+                        onChange={e => setFilterDateTo(e.target.value)}
+                        min={filterDateFrom || undefined}
+                        className="bg-transparent text-xs font-semibold text-slate-700 dark:text-slate-200 outline-none cursor-pointer w-full"
+                      />
+                    </div>
+                    {filterDateTo && (
+                      <button type="button" onClick={() => setFilterDateTo('')} className="text-slate-400 hover:text-rose-500 dark:text-slate-600 dark:hover:text-rose-400 transition-colors cursor-pointer shrink-0">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <CrudTable<EmployeeData>
@@ -1564,13 +1799,13 @@ export default function ManajemenEmployeePage() {
                         <div className="absolute left-0 right-0 mt-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0a0f1a] shadow-xl p-2 z-50 space-y-1.5">
                           {/* Search Input Box */}
                           <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
                             <input
                               type="text"
                               value={unitSearch}
+                              placeholder="Cari nama atau kode unit..."
+                              className="w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all"
                               onChange={(e) => setUnitSearch(e.target.value)}
-                              placeholder="Cari unit..."
-                              className="w-full rounded-lg border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#070b12] py-1.5 pl-9 pr-3 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500/50 focus:bg-white dark:focus:bg-[#0a0f1a]"
                               autoFocus
                             />
                           </div>

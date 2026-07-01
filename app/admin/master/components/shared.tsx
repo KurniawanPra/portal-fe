@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
 export const inputCls = 'w-full rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-slate-450 dark:focus:border-slate-700 transition-colors duration-150';
+export const searchInputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] pr-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all';
 export const labelCls = 'mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400';
 
 // ─── Toast utility ────────────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ export function SearchInput({
         placeholder={placeholder}
         value={value}
         onChange={e => onChange(e.target.value)}
-        className={inputCls}
+        className={`${searchInputCls} pl-10`}
       />
     </div>
   );
@@ -156,7 +157,7 @@ export function CrudHeader({
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={e => onSearchChange(e.target.value)}
-          className={`${inputCls} pl-10`}
+          className={`${searchInputCls} pl-10`}
         />
       </div>
       {addButtonText && onAddClick && (
@@ -202,16 +203,18 @@ export function FilterDropdown<T extends string>({
   value,
   onChange,
   options,
+  searchable = false,
   className = '',
 }: {
   value: T;
   onChange: (v: T) => void;
   options: { label: string; value: T }[];
+  searchable?: boolean;
   className?: string;
 }) {
   return (
     <SearchSelect
-      searchable={false}
+      searchable={searchable}
       options={options.map(opt => ({ value: opt.value, label: opt.label }))}
       value={value}
       onChange={val => onChange(val as T)}
