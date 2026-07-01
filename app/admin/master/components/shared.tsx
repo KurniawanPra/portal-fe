@@ -114,7 +114,7 @@ export function ActiveToggle({ value, onChange, disabled }: { value: boolean; on
       onClick={() => onChange(!value)}
       className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide transition-all duration-200 cursor-pointer focus:outline-none disabled:opacity-50 ${value ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border-emerald-200/15 hover:bg-emerald-100/40' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:bg-slate-100'}`}
     >
-      {value ? <ToggleRight className="h-3.5 w-3.5 text-emerald-650" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+      {value ? <ToggleRight className="h-3.5 w-3.5 text-emerald-500" /> : <ToggleLeft className="h-3.5 w-3.5" />}
       {value ? 'Aktif' : 'Nonaktif'}
     </button>
   );
@@ -348,6 +348,7 @@ export function FormModal({
   onSave,
   saving,
   icon: Icon,
+  isEdit = false,
   children,
 }: {
   open: boolean;
@@ -356,6 +357,7 @@ export function FormModal({
   onSave: () => void | Promise<void>;
   saving: boolean;
   icon?: React.ComponentType<{ className?: string }>;
+  isEdit?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -401,7 +403,12 @@ export function FormModal({
                 disabled={saving}
                 type="button"
                 onClick={onSave}
-                className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 px-4 py-2 text-xs font-semibold text-white dark:text-slate-900 disabled:opacity-50 transition-colors"
+                className={cn(
+                  "cursor-pointer inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold disabled:opacity-50 transition-colors text-white focus:outline-none focus:ring-2",
+                  isEdit
+                    ? "bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-sm shadow-indigo-500/25 focus:ring-indigo-500/30"
+                    : "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-sm shadow-emerald-500/25 focus:ring-emerald-500/30"
+                )}
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Simpan

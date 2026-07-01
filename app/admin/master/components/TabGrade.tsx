@@ -231,6 +231,7 @@ export default function TabGrade() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={Building2}
       >
         <div className="grid grid-cols-3 gap-3">

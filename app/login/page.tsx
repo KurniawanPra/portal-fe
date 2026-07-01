@@ -49,9 +49,70 @@ export default function LoginPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [is3dHovered, setIs3dHovered] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const [audioSrc, setAudioSrc] = useState('/audio/lagu-login.mp3');
+
+  React.useEffect(() => {
+    fetch('/api/login-songs/active')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && data.data && data.data.filename) {
+          setAudioSrc(`/audio/${data.data.filename}`);
+        }
+      })
+      .catch((err) => console.log('Failed to fetch active login song:', err));
+  }, []);
+
+  React.useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.load();
+    }
+  }, [audioSrc]);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  const initAudioEnhancer = () => {
+    if (!audioRef.current || audioContextRef.current) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      audioContextRef.current = ctx;
+
+      const source = ctx.createMediaElementSource(audioRef.current);
+
+      // Bass Booster: Lowshelf filter to boost bass below 100Hz
+      const bassFilter = ctx.createBiquadFilter();
+      bassFilter.type = 'lowshelf';
+      bassFilter.frequency.value = 100;
+      bassFilter.gain.value = 6; // Boost bass cleanly by 6dB
+
+      // Limiter/Compressor: dynamics compressor to prevent clipping distortion
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -12;
+      compressor.knee.value = 30;
+      compressor.ratio.value = 12;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+
+      // Master Gain: scale back overall gain slightly to avoid physical speaker rattle
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.65; // 65% volume ceiling
+
+      source.connect(bassFilter);
+      bassFilter.connect(compressor);
+      compressor.connect(gainNode);
+      gainNode.connect(ctx.destination);
+    } catch (e) {
+      console.log('Web Audio API enhancer failed:', e);
+    }
+  };
 
   const togglePlay = () => {
     if (!audioRef.current) return;
+    initAudioEnhancer();
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      audioContextRef.current.resume().catch(() => {});
+    }
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
@@ -85,30 +146,11 @@ export default function LoginPage() {
           scrollbar-width: none;
         }
 
-        /* Auto-scale down the login container on short screens to avoid clipping & scrollbars */
-        @media (max-height: 840px) {
-          .login-card-container {
-            transform: scale(0.92);
-            transform-origin: center center;
-          }
-        }
-        @media (max-height: 740px) {
-          .login-card-container {
-            transform: scale(0.84);
-            transform-origin: center center;
-          }
-        }
-        @media (max-height: 640px) {
-          .login-card-container {
-            transform: scale(0.76);
-            transform-origin: center center;
-          }
-        }
-        @media (max-height: 560px) {
-          .login-card-container {
-            transform: scale(0.68);
-            transform-origin: center center;
-          }
+        /* Fluid scaling based on viewport width and height, bounded between 0.75 and 1 */
+        .login-card-container {
+          transform: scale(clamp(0.75, min(100vh / 880, 100vw / 480), 1));
+          transform-origin: center center;
+          transition: transform 0.2s ease-out;
         }
       `}} />
 
@@ -156,7 +198,7 @@ export default function LoginPage() {
             </div>
           </header>
 
-          <div className="login-card-container w-full flex-1 flex items-center justify-center py-6 sm:py-8 animate-ios-page max-w-md mx-auto">
+          <div className="login-card-container w-full flex-1 flex items-center justify-center py-6 sm:py-8 -mt-6 sm:-mt-10 animate-ios-page max-w-md mx-auto">
             <LoginCard />
           </div>
 
@@ -220,7 +262,7 @@ export default function LoginPage() {
 
           {/* Floating Audio Controller */}
           <div className="absolute bottom-4 right-4 z-30 flex items-center gap-3">
-            <audio ref={audioRef} src="/audio/lagu-login.mp3" loop preload="none" />
+             <audio ref={audioRef} src={audioSrc} loop preload="none" />
             <button
               onClick={togglePlay}
               className="flex items-center gap-2.5 rounded-full border border-white/20 dark:border-white/10 bg-white/20 dark:bg-black/35 backdrop-blur-md px-4 py-2 text-[10px] tracking-wider font-bold text-slate-800 dark:text-slate-250 shadow-md hover:bg-white/35 dark:hover:bg-black/45 hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer focus:outline-none"
@@ -232,7 +274,7 @@ export default function LoginPage() {
                 <div className={cn('w-[2px] bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-300', isPlaying ? 'animate-soundwave-3' : 'h-2.5')} />
                 <div className={cn('w-[2px] bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-300', isPlaying ? 'animate-soundwave-4' : 'h-1.5')} />
               </div>
-              <span>{isPlaying ? 'MUTE BACKGROUND' : 'PLAY AMBIENT'}</span>
+              <span>{isPlaying ? 'MUTE BACKGROUND' : 'PLAY'}</span>
             </button>
           </div>
 

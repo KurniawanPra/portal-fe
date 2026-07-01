@@ -347,6 +347,7 @@ export default function TabPenempatanArea() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={MapPin}
       >
         <div>

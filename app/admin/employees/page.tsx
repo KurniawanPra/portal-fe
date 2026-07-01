@@ -306,6 +306,13 @@ export default function ManajemenEmployeePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // States for optional User account creation
+  const [createUserAccount, setCreateUserAccount] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
+  const [userRole, setUserRole] = useState<'Admin' | 'User'>('User');
+  const [userStatus, setUserStatus] = useState<'Aktif' | 'Suspended'>('Aktif');
+
   const getUnitPathStr = useCallback((unitId: string) => {
     let curr = unitOrganisasis.find(u => u.id === unitId);
     const path: string[] = [];
@@ -743,6 +750,11 @@ export default function ManajemenEmployeePage() {
     setUnitDropdownOpen(false);
     setPhotoFile(null);
     setErrors({});
+    setCreateUserAccount(false);
+    setUserEmail('');
+    setUserPassword('');
+    setUserRole('User');
+    setUserStatus('Aktif');
     setModalOpen(true);
   }, []);
 
@@ -793,6 +805,26 @@ export default function ManajemenEmployeePage() {
   const handleSave = useCallback(async () => {
     setErrors({});
 
+    // Client-side validation for user account
+    if (!editTarget && createUserAccount) {
+      const userErrors: Record<string, string> = {};
+      if (!userEmail.trim()) {
+        userErrors.userEmail = 'Email wajib diisi.';
+      } else if (!userEmail.includes('@')) {
+        userErrors.userEmail = 'Format email tidak valid.';
+      }
+      if (!userPassword.trim()) {
+        userErrors.userPassword = 'Password wajib diisi.';
+      } else if (userPassword.length < 8) {
+        userErrors.userPassword = 'Password minimal 8 karakter.';
+      }
+      if (Object.keys(userErrors).length > 0) {
+        setErrors(userErrors);
+        showToast('err', Object.values(userErrors)[0]);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const unitId = form.unitPath[form.unitPath.length - 1] || null;
@@ -826,7 +858,24 @@ export default function ManajemenEmployeePage() {
       } else {
         const res = await api.post<any>('/employees', payload);
         employeeId = res.data.id;
-        showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
+        
+        if (createUserAccount) {
+          try {
+            const userIsActive = userRole === 'Admin' ? true : userStatus === 'Aktif';
+            await api.post('/users', {
+              email: userEmail,
+              password: userPassword,
+              role: userRole === 'Admin' ? 'super_admin' : 'user',
+              isActive: userIsActive,
+              employeeId: employeeId,
+            });
+            showToast('ok', `Employee dan User "${form.nama}" berhasil ditambahkan.`);
+          } catch (userErr: any) {
+            showToast('err', `Employee berhasil ditambahkan, tetapi gagal membuat akun user: ${userErr.message}`);
+          }
+        } else {
+          showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
+        }
       }
 
       // Photo upload if selected
@@ -875,7 +924,7 @@ export default function ManajemenEmployeePage() {
     } finally {
       setSaving(false);
     }
-  }, [form, editTarget, photoFile, fetchData]);
+  }, [form, editTarget, photoFile, fetchData, createUserAccount, userEmail, userPassword, userRole, userStatus]);
 
   // ─── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async () => {
@@ -1294,6 +1343,88 @@ export default function ManajemenEmployeePage() {
                 </button>
               </div>
               <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto hide-scrollbar">
+                {/* Checkbox buat User atau Employee saja */}
+                {!editTarget && (
+                  <div className={`p-4 rounded-2xl border transition-all duration-200 ${createUserAccount ? 'border-amber-500/25 bg-amber-500/[0.02] dark:bg-amber-500/[0.01]' : 'border-slate-150 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]'} space-y-4`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">Buat Akun User Login</span>
+                        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">Karyawan ini otomatis dibuatkan akun untuk login ke portal</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setCreateUserAccount(!createUserAccount)}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${createUserAccount ? 'bg-amber-500' : 'bg-slate-200 dark:bg-slate-800'}`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${createUserAccount ? 'translate-x-5' : 'translate-x-0'}`}
+                        />
+                      </button>
+                    </div>
+
+                    {createUserAccount && (
+                      <div className="space-y-3 pt-4 border-t border-slate-200/50 dark:border-white/[0.04] animate-fade-in">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={labelCls}>Email User *</label>
+                            <input
+                              type="email"
+                              value={userEmail}
+                              onChange={(e) => setUserEmail(e.target.value)}
+                              placeholder="nama@inl.co.id"
+                              className={`${inputCls} ${errors.userEmail ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`}
+                            />
+                            {errors.userEmail && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.userEmail}</span>}
+                          </div>
+                          <div>
+                            <label className={labelCls}>Password User *</label>
+                            <input
+                              type="password"
+                              value={userPassword}
+                              onChange={(e) => setUserPassword(e.target.value)}
+                              placeholder="Min 8 karakter, huruf + angka"
+                              className={`${inputCls} ${errors.userPassword ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`}
+                            />
+                            {errors.userPassword && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.userPassword}</span>}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={labelCls}>Role Akses *</label>
+                            <SearchSelect
+                              searchable={false}
+                              options={[
+                                { value: 'Admin', label: 'Admin' },
+                                { value: 'User', label: 'User' },
+                              ]}
+                              value={userRole}
+                              onChange={(val) => {
+                                const nextRole = val as 'Admin' | 'User';
+                                setUserRole(nextRole);
+                              }}
+                              placeholder="- Pilih Role -"
+                            />
+                          </div>
+                          <div>
+                            <label className={labelCls}>Status Akun *</label>
+                            <SearchSelect
+                              searchable={false}
+                              disabled={userRole === 'Admin'}
+                              options={[
+                                { value: 'Aktif', label: 'Aktif' },
+                                { value: 'Suspended', label: 'Suspended' },
+                              ]}
+                              value={userRole === 'Admin' ? 'Aktif' : userStatus}
+                              onChange={(val) => setUserStatus(val as 'Aktif' | 'Suspended')}
+                              placeholder="- Pilih Status -"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Nama */}
                 <div>
                   <label className={labelCls}>Nama Lengkap *</label>
@@ -1671,6 +1802,8 @@ export default function ManajemenEmployeePage() {
                   </div>
                   {errors.alamat && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.alamat}</span>}
                 </div>
+
+
 
                 {/* Foto Profil Upload */}
                 <div className="space-y-2">

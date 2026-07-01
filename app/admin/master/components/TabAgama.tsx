@@ -186,6 +186,7 @@ export default function TabAgama() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={BookOpen}
       >
         <div>

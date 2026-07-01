@@ -7,10 +7,13 @@ export function cn(...inputs: ClassValue[]) {
 
 export function resolveImageUrl(url: string | null | undefined): string {
   if (!url) return '';
+
+  const normalizedUrl = url.trim().replace(/\\/g, '/');
+  if (!normalizedUrl) return '';
   
-  if (url.startsWith('http')) {
+  if (normalizedUrl.startsWith('http')) {
     try {
-      const parsedUrl = new URL(url);
+      const parsedUrl = new URL(normalizedUrl);
       
       // Di produksi (atau diakses remote), kita tidak ingin mengakses localhost
       const isLocalhostUrl = parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1';
@@ -23,12 +26,12 @@ export function resolveImageUrl(url: string | null | undefined): string {
     } catch (e) {
       // Abaikan error parsing URL
     }
-    return url;
+    return normalizedUrl;
   }
   
-  if (url.startsWith('/')) {
-    return url;
+  if (normalizedUrl.startsWith('/')) {
+    return normalizedUrl;
   }
   
-  return `/uploads/${url}`;
+  return `/uploads/${normalizedUrl}`;
 }

@@ -142,11 +142,11 @@ function AccessBarChart({ data, appsList }: { data: DailyLog[]; appsList: { id: 
   };
 
   return (
-    <div className="relative" style={{ height: CHART_H + 40 }} onMouseMove={handleMouseMove}>
+    <div className="relative" style={{ height: CHART_H + 40 } as React.CSSProperties} onMouseMove={handleMouseMove}>
       {/* Y-axis guide lines */}
-      <div className="absolute inset-x-4 top-4 flex flex-col justify-between pointer-events-none" style={{ height: CHART_H }}>
+      <div className="absolute inset-x-4 top-4 flex flex-col justify-between pointer-events-none" style={{ height: CHART_H } as React.CSSProperties}>
         {[100, 75, 50, 25, 0].map(pct => (
-          <div key={pct} className="flex items-center gap-2" style={{ height: 0 }}>
+          <div key={pct} className="flex items-center gap-2" style={{ height: 0 } as React.CSSProperties}>
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 w-6 text-right shrink-0 font-mono">
               {Math.round((maxTotal * pct) / 100)}
             </span>
@@ -156,14 +156,14 @@ function AccessBarChart({ data, appsList }: { data: DailyLog[]; appsList: { id: 
       </div>
 
       {/* Bars Container with Horizontal Scroll */}
-      <div className="absolute inset-x-0 top-4 pl-12 pr-4 flex items-end gap-1.5 sm:gap-2.5 overflow-x-auto hide-scrollbar" style={{ height: CHART_H + 24 }}>
+      <div className="absolute inset-x-0 top-4 pl-12 pr-4 flex items-end gap-1.5 sm:gap-2.5 overflow-x-auto hide-scrollbar" style={{ height: CHART_H + 24 } as React.CSSProperties}>
         {data.map(d => {
           const barH = (d.total / maxTotal) * CHART_H;
           return (
             <div
               key={d.key}
               className="group relative flex flex-col justify-end items-center flex-1 pb-6 cursor-crosshair min-w-[12px] sm:min-w-[16px] max-w-[28px]"
-              style={{ height: CHART_H + 24 }}
+              style={{ height: CHART_H + 24 } as React.CSSProperties}
               onMouseEnter={() => setHovered(d)}
               onMouseLeave={() => setHovered(null)}
             >
@@ -174,7 +174,7 @@ function AccessBarChart({ data, appsList }: { data: DailyLog[]; appsList: { id: 
                 style={{
                   height: Math.max(4, barH),
                   transformOrigin: 'bottom',
-                }}
+                } as React.CSSProperties}
               >
                 {d.total === 0 ? (
                   <div className="w-full h-full bg-slate-200 dark:bg-slate-800 opacity-40" />
@@ -191,7 +191,7 @@ function AccessBarChart({ data, appsList }: { data: DailyLog[]; appsList: { id: 
                           height: `${pctHeight}%`,
                           backgroundColor: app.color,
                           opacity: hovered?.key === d.key ? 0.95 : 0.75,
-                        }}
+                        } as React.CSSProperties}
                       />
                     );
                   })
@@ -214,7 +214,7 @@ function AccessBarChart({ data, appsList }: { data: DailyLog[]; appsList: { id: 
           style={{
             left: Math.min(mousePos.x + 12, typeof window !== 'undefined' ? window.innerWidth - 240 : 300),
             top: mousePos.y - 120,
-          }}
+          } as React.CSSProperties}
         >
           <p className="font-extrabold text-slate-900 dark:text-white text-xs mb-1">Tanggal {hovered.label}</p>
           <p className="font-bold text-amber-600 dark:text-amber-400 text-xs mb-2">{hovered.total} total akses</p>
@@ -224,7 +224,7 @@ function AccessBarChart({ data, appsList }: { data: DailyLog[]; appsList: { id: 
               return (
                 <div key={app.id} className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: app.color }} />
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: app.color } as React.CSSProperties} />
                     <span className="text-slate-600 dark:text-slate-400 truncate text-[11px] font-semibold">{app.name}</span>
                   </div>
                   <span className="font-bold text-slate-800 dark:text-slate-200 font-mono text-[11px]">{count}</span>
@@ -597,7 +597,7 @@ export default function AdminPage() {
               <div key={app.id} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-850 bg-white dark:bg-slate-900 shadow-sm text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600">{i + 1}</span>
-                  <span className="h-2 w-2 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: app.color }} />
+                  <span className="h-2 w-2 rounded-full shrink-0 animate-pulse" style={{ backgroundColor: app.color } as React.CSSProperties} />
                   <span className="font-semibold text-slate-850 dark:text-slate-200 truncate">{app.name}</span>
                 </div>
                 <span className="font-bold text-slate-750 dark:text-slate-300 tabular-nums">
@@ -793,7 +793,7 @@ export default function AdminPage() {
             style={{
               opacity: statusCardOpacity,
               background: `radial-gradient(circle 180px at ${statusCardMouse.x}px ${statusCardMouse.y}px, rgba(245, 158, 11, 0.08), transparent 80%)`
-            }}
+            } as React.CSSProperties}
           />
 
           <div className="relative z-10 px-5 py-5.5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
@@ -803,9 +803,9 @@ export default function AdminPage() {
             </h2>
             {/* Concentric Circle Ping Radar */}
             <div className="relative flex h-5 w-5 items-center justify-center">
-              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${healthInfo?.api.status === 'online' ? "bg-emerald-400" : "bg-rose-455"}`} style={{ animationDuration: '2.5s' }} />
-              <span className={`absolute inline-flex h-3.5 w-3.5 rounded-full opacity-50 animate-ping ${healthInfo?.api.status === 'online' ? "bg-emerald-400" : "bg-rose-455"}`} style={{ animationDuration: '2.5s', animationDelay: '0.6s' }} />
-              <span className={`absolute inline-flex h-2 w-2 rounded-full opacity-35 animate-ping ${healthInfo?.api.status === 'online' ? "bg-emerald-400" : "bg-rose-455"}`} style={{ animationDuration: '2.5s', animationDelay: '1.2s' }} />
+              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${healthInfo?.api.status === 'online' ? "bg-emerald-400" : "bg-rose-455"}`} style={{ animationDuration: '2.5s' } as React.CSSProperties} />
+              <span className={`absolute inline-flex h-3.5 w-3.5 rounded-full opacity-50 animate-ping ${healthInfo?.api.status === 'online' ? "bg-emerald-400" : "bg-rose-455"}`} style={{ animationDuration: '2.5s', animationDelay: '0.6s' } as React.CSSProperties} />
+              <span className={`absolute inline-flex h-2 w-2 rounded-full opacity-35 animate-ping ${healthInfo?.api.status === 'online' ? "bg-emerald-400" : "bg-rose-455"}`} style={{ animationDuration: '2.5s', animationDelay: '1.2s' } as React.CSSProperties} />
               <span className={`relative inline-flex h-1.5 w-1.5 rounded-full shadow-sm ${healthInfo?.api.status === 'online' ? "bg-emerald-500 shadow-emerald-500/50" : "bg-rose-500 shadow-rose-500/50"}`} />
             </div>
           </div>
@@ -915,7 +915,7 @@ export default function AdminPage() {
                         <div
                           className={`h-full rounded-full transition-all duration-500 ${s.color.includes('text-amber-500') ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
                             }`}
-                          style={{ width: `${s.pct}%` }}
+                          style={{ width: `${s.pct}%` } as React.CSSProperties}
                         />
                       </div>
                     )}

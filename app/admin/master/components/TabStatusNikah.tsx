@@ -205,6 +205,7 @@ export default function TabStatusNikah() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={Heart}
       >
         <div>

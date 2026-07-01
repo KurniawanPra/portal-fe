@@ -204,6 +204,7 @@ export default function TabKategoriAplikasi() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={Layers}
       >
         <div>

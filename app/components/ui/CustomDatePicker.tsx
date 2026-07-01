@@ -54,6 +54,10 @@ export function CustomDatePicker({
   useEffect(() => {
     if (!isOpen) return;
     const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'SELECT' || target.tagName === 'OPTION')) {
+        return;
+      }
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }

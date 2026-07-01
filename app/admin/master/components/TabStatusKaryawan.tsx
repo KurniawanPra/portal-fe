@@ -207,6 +207,7 @@ export default function TabStatusKaryawan() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={Briefcase}
       >
         <div className="grid grid-cols-3 gap-3">

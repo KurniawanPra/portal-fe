@@ -223,6 +223,7 @@ export default function TabPendidikan() {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         saving={saving}
+        isEdit={!!editTarget}
         icon={GraduationCap}
       >
         <div className="grid grid-cols-3 gap-3">

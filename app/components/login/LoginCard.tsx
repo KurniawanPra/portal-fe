@@ -100,11 +100,12 @@ export default function LoginCard() {
     const isRemembered = localStorage.getItem('portal_remember') === 'true';
     if (isRemembered) {
       setEmail(localStorage.getItem('portal_email') || '');
-      setPassword(localStorage.getItem('portal_password') || '');
       setRemember(true);
     } else {
       setRemember(false);
     }
+
+    localStorage.removeItem('portal_password');
   }, []);
 
 
@@ -211,11 +212,9 @@ export default function LoginCard() {
       if (remember) {
         localStorage.setItem('portal_remember', 'true');
         localStorage.setItem('portal_email', email);
-        localStorage.setItem('portal_password', password);
       } else {
         localStorage.removeItem('portal_remember');
         localStorage.removeItem('portal_email');
-        localStorage.removeItem('portal_password');
       }
 
       if (res.data.requiresTotp) {

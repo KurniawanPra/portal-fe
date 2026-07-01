@@ -7,6 +7,7 @@ import {
   ShieldAlert, UserCog, ChevronDown, Loader2, Lock, User
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
+import { SearchSelect, SearchSelectOption } from '@/components/ui/SearchSelect';
 import { api, ApiRequestError } from '@/lib/api';
 import { PrimaryButton, FilterDropdown, SecondaryButton, DangerButton, Toast, CrudPagination, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
 import { resolveImageUrl } from '@/lib/utils';
@@ -204,6 +205,30 @@ export default function ManajemenUserPage() {
   // Employee yang sudah di-assign ke user lain tidak bisa dipilih lagi
   const assignedEmployeeIds = useMemo(() => new Set(users.filter(u => u.employeeId).map(u => u.employeeId!)), [users]);
   const availableEmployees = useMemo(() => allEmployees.filter(e => !assignedEmployeeIds.has(e.id)), [allEmployees, assignedEmployeeIds]);
+
+  const employeeOptions = useMemo(() => {
+    const opts: SearchSelectOption[] = [{ value: '', label: '— Tidak dikaitkan —' }];
+    if (editTarget?.employeeId) {
+      const emp = allEmployees.find(e => e.id === editTarget.employeeId);
+      if (emp) {
+        opts.push({
+          value: emp.id,
+          label: `${emp.nama} — ${emp.nrk}`,
+          subLabel: emp.jabatan,
+        });
+      }
+    }
+    availableEmployees
+      .filter(e => e.id !== editTarget?.employeeId)
+      .forEach(emp => {
+        opts.push({
+          value: emp.id,
+          label: `${emp.nama} — ${emp.nrk}`,
+          subLabel: emp.jabatan,
+        });
+      });
+    return opts;
+  }, [editTarget, allEmployees, availableEmployees]);
 
   const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setErrors({}); setModalOpen(true); }, []);
   const openEdit   = useCallback((u: UserData) => {
@@ -635,60 +660,43 @@ export default function ManajemenUserPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Role Akses</label>
-                    <div className="relative">
-                      <select
-                        value={form.role}
-                        onChange={e => {
-                          const nextRole = e.target.value as UserRole;
-                          setForm(f=>({
-                            ...f,
-                            role: nextRole,
-                            status: nextRole === 'Admin' ? 'Aktif' : f.status
-                          }));
-                        }}
-                        className={`${inputCls} appearance-none pr-10 cursor-pointer`}
-                      >
-                        {ROLES.map(r => <option key={r} value={r} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{r}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <SearchSelect
+                      searchable={false}
+                      options={ROLES.map(r => ({ value: r, label: r }))}
+                      value={form.role}
+                      onChange={val => {
+                        const nextRole = val as UserRole;
+                        setForm(f => ({
+                          ...f,
+                          role: nextRole,
+                          status: nextRole === 'Admin' ? 'Aktif' : f.status
+                        }));
+                      }}
+                      placeholder="Pilih Role Akses"
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>Status Akun</label>
-                    <div className="relative">
-                      <select
-                        disabled={form.role === 'Admin'}
-                        value={form.role === 'Admin' ? 'Aktif' : form.status}
-                        onChange={e => setForm(f=>({...f, status:e.target.value as UserStatus}))}
-                        className={`${inputCls} appearance-none pr-10 ${form.role === 'Admin' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
-                      >
-                        {STATUSES.map(s => <option key={s} value={s} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{s}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    </div>
+                    <SearchSelect
+                      searchable={false}
+                      disabled={form.role === 'Admin'}
+                      options={STATUSES.map(s => ({ value: s, label: s }))}
+                      value={form.role === 'Admin' ? 'Aktif' : form.status}
+                      onChange={val => setForm(f => ({ ...f, status: val as UserStatus }))}
+                      placeholder="Pilih Status"
+                    />
                   </div>
                 </div>
                 <div>
                   <label className={labelCls}>Link ke Employee</label>
-                  <div className="relative">
-                    <UserCog className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <select
-                      value={form.employeeId ?? ''}
-                      onChange={e => setForm(f=>({...f, employeeId: e.target.value || ''}))}
-                      className={`${inputCls} pl-10 pr-10 appearance-none cursor-pointer ${errors.employeeId ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`}
-                    >
-                      <option value="" className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">— Tidak dikaitkan —</option>
-                      {/* Show currently linked employee if editing */}
-                      {editTarget?.employeeId && (() => {
-                        const emp = allEmployees.find(e => e.id === editTarget.employeeId);
-                        return emp ? <option key={emp.id} value={emp.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{emp.nama} — {emp.nrk}</option> : null;
-                      })()}
-                      {availableEmployees.filter(e => e.id !== editTarget?.employeeId).map(emp => (
-                        <option key={emp.id} value={emp.id} className="bg-white dark:bg-[#0d1218] text-slate-800 dark:text-slate-100">{emp.nama} — {emp.nrk}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                  </div>
+                  <SearchSelect
+                    searchable={true}
+                    options={employeeOptions}
+                    value={form.employeeId ?? ''}
+                    onChange={val => setForm(f => ({ ...f, employeeId: val }))}
+                    placeholder="Pilih Employee"
+                    error={!!errors.employeeId}
+                  />
                   {errors.employeeId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.employeeId}</span>}
                   {!errors.employeeId && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Hubungkan akun user ke data employee yang tersedia.</p>}
                 </div>

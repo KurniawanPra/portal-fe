@@ -51,6 +51,7 @@ const iconMap: Record<string, React.ComponentType<LucideProps>> = {
 
 // Returns a beautiful iOS App Store style icon container (no background, no border)
 function AppIcon({ name }: { name: string }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const containerClass = "h-24 w-24 shrink-0 flex items-center justify-center transition-transform duration-300 bg-transparent";
 
   switch (name) {
@@ -122,16 +123,19 @@ function AppIcon({ name }: { name: string }) {
       );
     default:
       const isImg = name && (name.startsWith('http') || name.includes('.') || name.includes('/') || name.includes('\\'));
-      if (isImg) {
+      if (isImg && !imageFailed) {
         const srcUrl = resolveImageUrl(name);
         return (
           <div className={containerClass}>
             <img
               src={srcUrl}
               alt="Icon"
-              className="h-20 w-20 object-contain shrink-0"
+              loading="lazy"
+              decoding="async"
+              className="h-20 w-20 shrink-0 rounded-2xl bg-white/70 object-contain p-2 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-900/60 dark:ring-white/10"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
+                setImageFailed(true);
               }}
             />
           </div>
@@ -297,7 +301,7 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
             return (
               <div
                 key={app.id}
-                style={{ animationDelay: `${index * 75}ms` }}
+                style={{ animationDelay: `${index * 75}ms` } as React.CSSProperties}
                 className="group perspective-1000 min-h-[12rem] w-full animate-fade-up fill-mode-both"
               >
                 {/* Inner 3D Container */}
@@ -389,9 +393,9 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
             
             {/* Header / Icon */}
             <div className="flex items-start gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/30">
+              {/* <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/30">
                 <ShieldAlert className="h-5 w-5" />
-              </div>
+              </div> */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
                   {modal.title}
