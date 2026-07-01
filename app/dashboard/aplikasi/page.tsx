@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import AppCardGrid from '@/components/dashboard/AppCardGrid';
 import { api } from '@/lib/api';
 import { Loader2, ShieldAlert } from 'lucide-react';
+import { AnimatedPage, AnimatedSection } from '@/components/motion/Animated';
 
 interface ApiAplikasi {
   id: string;
@@ -107,19 +108,19 @@ function AplikasiContent() {
   }
 
   return (
-    <div className="transition-colors duration-300">
+    <AnimatedPage className="transition-colors duration-300">
       {/* Header Section */}
-      <div className="mb-6">
+      <AnimatedSection className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100 sm:text-3xl">
           Portal Aplikasi Karyawan
         </h1>
         <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-slate-400">
           Akses seluruh aplikasi kerja PT Industri Nabati Lestari yang terintegrasi.
         </p>
-      </div>
+      </AnimatedSection>
 
       {/* Mobile Search Bar Helper */}
-      <div className="mb-6 sm:hidden relative">
+      <AnimatedSection className="mb-6 sm:hidden relative">
         <input
           type="text"
           value={query}
@@ -141,18 +142,20 @@ function AplikasiContent() {
             <path d="m21 21-4.3-4.3" />
           </svg>
         </span>
-      </div>
+      </AnimatedSection>
 
       {/* Cards List Grid */}
-      {loading ? (
+      <AnimatedSection>
+        {loading ? (
         <div className="flex items-center justify-center py-20 gap-3 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-slate-200 dark:border-slate-800/60 rounded-3xl p-8">
           <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
           <span className="text-sm font-semibold text-slate-400">Memuat aplikasi...</span>
         </div>
-      ) : (
-        <AppCardGrid apps={apps} searchQuery={query} isEmployee={isEmployee} />
-      )}
-    </div>
+        ) : (
+          <AppCardGrid apps={apps} searchQuery={query} isEmployee={isEmployee} />
+        )}
+      </AnimatedSection>
+    </AnimatedPage>
   );
 }
 

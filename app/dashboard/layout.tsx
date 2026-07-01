@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarInset } from '@/components/animate-ui/component
 import { api } from '@/lib/api';
 import { getAccessToken, clearTokens } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
+import { ApplicationLaunchProvider } from '@/components/motion/ApplicationLaunchAnimation';
 
 interface MeResponse {
   id: string;
@@ -149,8 +150,9 @@ export default function DashboardLayout({
   }
 
   return (
-    <SidebarProvider>
-      <div className="relative flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100 to-amber-50/20 dark:from-[#0e1118] dark:via-[#121620] dark:to-[#0e1118] overflow-hidden transition-colors duration-300">
+    <ApplicationLaunchProvider>
+      <SidebarProvider>
+        <div className="relative flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-100 to-amber-50/20 dark:from-[#0e1118] dark:via-[#121620] dark:to-[#0e1118] overflow-hidden transition-colors duration-300">
         {/* Background radial highlight */}
         <div
           className="absolute inset-0 pointer-events-none z-0"
@@ -183,6 +185,7 @@ export default function DashboardLayout({
           </main>
         </SidebarInset>
       </div>
-    </SidebarProvider>
+      </SidebarProvider>
+    </ApplicationLaunchProvider>
   );
 }

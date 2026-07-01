@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { api } from '@/lib/api';
 import { resolveImageUrl } from '@/lib/utils';
+import { AnimatedCard, StaggerContainer } from '@/components/motion/Animated';
+import { useLaunchApp } from '@/components/motion/ApplicationLaunchAnimation';
 import { 
   Clock, 
   BookOpen, 
@@ -13,8 +15,6 @@ import {
   ShoppingBag, 
   HelpCircle,
   Lock,
-  X,
-  ShieldAlert,
   LucideProps
 } from 'lucide-react';
 
@@ -50,7 +50,7 @@ const iconMap: Record<string, React.ComponentType<LucideProps>> = {
 };
 
 // Returns a beautiful iOS App Store style icon container (no background, no border)
-function AppIcon({ name }: { name: string }) {
+export function AppIcon({ name }: { name: string }) {
   const [imageFailed, setImageFailed] = useState(false);
   const containerClass = "h-24 w-24 shrink-0 flex items-center justify-center transition-transform duration-300 bg-transparent";
 
@@ -220,6 +220,7 @@ const getAuthBadgeClass = (appName: string, authMode: string) => {
 };
 
 export default function AppCardGrid({ apps, searchQuery, showUuid = false, columns = 3, isEmployee = true }: AppCardGridProps) {
+  const { launchApp, launchingApp } = useLaunchApp();
   const [modal, setModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -242,14 +243,21 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
 
   const handleOpenApp = async (e: React.MouseEvent<HTMLAnchorElement>, app: Aplikasi) => {
     e.preventDefault();
+    const cardElement = e.currentTarget.closest('[data-app-card]') as HTMLElement | null;
+
     if (app.auth_mode !== 'sso') {
-      // Log access to independent app
-      try {
-        await api.post(`/apps/${app.id}/access`, {});
-      } catch (err) {
-        console.error('Gagal mencatat akses aplikasi:', err);
-      }
-      window.open(app.url, '_blank', 'noopener,noreferrer');
+      launchApp({
+        appName: app.nama,
+        url: app.url,
+        iconElement: cardElement,
+        onBeforeRedirect: async () => {
+          try {
+            await api.post(`/apps/${app.id}/access`, {});
+          } catch (err) {
+            console.error('Gagal mencatat akses aplikasi:', err);
+          }
+        },
+      });
       return;
     }
 
@@ -268,9 +276,8 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
       const baseUrl = res.data.redirectUrl || app.url;
       const separator = baseUrl.includes('?') ? '&' : '?';
       const finalUrl = `${baseUrl}${separator}token=${token}`;
-      window.open(finalUrl, '_blank', 'noopener,noreferrer');
+      launchApp({ appName: app.nama, url: finalUrl, iconElement: cardElement });
     } catch (err: any) {
-      // Extract pesan dari response axios atau Error biasa
       const msg: string =
         err?.response?.data?.error ||
         err?.response?.data?.message ||
@@ -295,14 +302,15 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
           </p>
         </div>
       ) : (
-        <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${columns === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} items-start`}>
-          {filteredApps.map((app, index) => {
+        <StaggerContainer className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${columns === 4 ? 'xl:grid-cols-4' : 'xl:grid-cols-3'} items-start`} stagger={0.06}>
+          {filteredApps.map((app) => {
             const isLockedSso = app.auth_mode === 'sso' && !isEmployee;
+            const isLaunching = launchingApp === app.nama;
             return (
-              <div
+              <AnimatedCard
                 key={app.id}
-                style={{ animationDelay: `${index * 75}ms` } as React.CSSProperties}
-                className="group perspective-1000 min-h-[12rem] w-full animate-fade-up fill-mode-both"
+                data-app-card
+                className={`group perspective-1000 min-h-[12rem] w-full transition-all duration-500 ${isLaunching ? 'scale-[1.03] opacity-70 blur-[1px]' : ''}`}
               >
                 {/* Inner 3D Container */}
                 <div className="relative w-full rounded-3xl transition-transform duration-500 preserve-3d group-hover:[transform:rotateY(180deg)]">
@@ -381,10 +389,10 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
                   </div>
 
                 </div>
-              </div>
+              </AnimatedCard>
             );
           })}
-        </div>
+        </StaggerContainer>
       )}
 
       {modal.isOpen && (
