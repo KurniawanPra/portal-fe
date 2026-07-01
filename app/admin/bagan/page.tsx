@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   GitBranch, ChevronRight, ChevronDown, ChevronUp, Loader2, Search, ZoomIn, ZoomOut, RefreshCw,
-  X, Download, User, Briefcase, Building2, Maximize2, Minimize2
+  X, Download, User, Briefcase, Building2, Maximize2, Minimize2, PanelLeft
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { ModalPortal } from '@/components/ui/ModalPortal';
@@ -698,8 +698,10 @@ export default function BaganOrganisasiPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sidebarSearch, setSidebarSearch] = useState('');
-  const [legendOpen, setLegendOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [legendOpen, setLegendOpen] = useState(false);
 
   
   // Canvas localized navigation root
@@ -1645,6 +1647,35 @@ export default function BaganOrganisasiPage() {
     }
   };
 
+  // Touch Panning support for Mobile
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('input') || target.closest('.org-node-card-interactive')) {
+      return;
+    }
+
+    setIsDragging(true);
+    setDragStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    setPan({
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
   const renderChartLayout = () => {
     return (
       <div className={`relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] shadow-lg flex flex-col transition-all duration-200 ${isFullscreen ? 'w-screen h-screen rounded-none border-none' : 'h-[70vh]'}`}>
@@ -1653,31 +1684,51 @@ export default function BaganOrganisasiPage() {
         {/* Toolbar */}
         <div className="flex flex-col gap-3 px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] sm:flex-row sm:items-center sm:justify-between flex-wrap z-20 bg-white/95 dark:bg-[#0f1623]/95 backdrop-blur-md">
           {/* Main search bar for canvas highlights */}
-          <div className="relative w-full sm:w-72">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Cari nama atau kode unit..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all"
-              autoFocus
-            />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* Desktop Sidebar Collapse Toggle */}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed(v => !v)}
+              className="hidden md:flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-800 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none"
+              title={sidebarCollapsed ? "Tampilkan Penjelajah Hierarki" : "Sembunyikan Penjelajah Hierarki"}
+            >
+              <PanelLeft className={`h-4.5 w-4.5 transition-transform duration-250 ${sidebarCollapsed ? '' : 'rotate-180'}`} />
+            </button>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Cari nama atau kode unit..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] pl-10 pr-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                autoFocus
+              />
+            </div>
           </div>
-          <button
-            onClick={() => setLegendOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-slate-650 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer focus:outline-none"
-          >
-            <Building2 className="h-3.5 w-3.5 text-amber-550 shrink-0" /> Legenda Nomenklatur
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => setShowMobileSidebar(true)}
+              className="md:hidden flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-slate-650 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer focus:outline-none"
+            >
+              <GitBranch className="h-3.5 w-3.5 text-amber-550 shrink-0" /> Hierarki Unit
+            </button>
+            <button
+              onClick={() => setLegendOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] px-3.5 py-2 text-xs font-bold text-slate-650 dark:text-slate-450 hover:bg-slate-100 dark:hover:bg-white/[0.06] transition-all cursor-pointer focus:outline-none"
+            >
+              <Building2 className="h-3.5 w-3.5 text-amber-550 shrink-0" /> Legenda Nomenklatur
+            </button>
+          </div>
         </div>
 
         {/* Main Body Splitter */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left sub-sidebar (Scrollable tree navigation) */}
+          {/* Left sub-sidebar (Scrollable tree navigation) - hidden on mobile, shown on desktop */}
           <div
-            style={{ width: `${sidebarWidth}px` }}
-            className="border-r border-slate-100 dark:border-white/[0.06] bg-slate-50/40 dark:bg-[#0c121e]/40 flex flex-col h-full shrink-0 select-none relative"
+            style={{ width: `${sidebarCollapsed ? 0 : sidebarWidth}px` }}
+            className={`hidden md:flex border-r border-slate-100 dark:border-white/[0.06] bg-slate-50/40 dark:bg-[#0c121e]/40 flex-col h-full shrink-0 select-none relative transition-all duration-300 ${sidebarCollapsed ? 'border-none overflow-hidden' : ''}`}
           >
             {/* Hierarchy scroll view with hidden scrollbar */}
             <div
@@ -1722,6 +1773,10 @@ export default function BaganOrganisasiPage() {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
             onWheel={handleWheel}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
           >
             {/* Grid Pattern */}
             <div
@@ -2214,6 +2269,56 @@ export default function BaganOrganisasiPage() {
             </div>
           </div>
         </div>
+        {/* ── Mobile Hierarchy Sidebar Drawer ── */}
+        {showMobileSidebar && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm md:hidden animate-fade-in"
+              onClick={() => setShowMobileSidebar(false)}
+            />
+            <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white dark:bg-[#0f1623] border-r border-slate-200 dark:border-white/[0.06] z-50 md:hidden flex flex-col p-4 shadow-2xl animate-in slide-in-from-left duration-200">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06] mb-4">
+                <div className="flex items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-bold text-slate-800 dark:text-white">Hierarki Organisasi</span>
+                </div>
+                <button
+                  onClick={() => setShowMobileSidebar(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Hierarchy Explorer in Mobile Drawer */}
+              <div className="flex-1 overflow-y-auto space-y-1 no-scrollbar hide-scrollbar">
+                {loading ? (
+                  <div className="flex items-center justify-center py-10 gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+                    <span className="text-xs font-semibold text-slate-400">Loading hierarchy...</span>
+                  </div>
+                ) : sidebarTree.length === 0 ? (
+                  <p className="text-xs italic text-slate-400 dark:text-slate-500 text-center py-10">Unit tidak ditemukan</p>
+                ) : (
+                  sidebarTree.map(root => (
+                    <SidebarNode
+                      key={root.id}
+                      node={root}
+                      employees={employees}
+                      getGradeInfo={getGradeInfo}
+                      onSelectUnit={node => {
+                        setFocusUnit(node);
+                        setShowMobileSidebar(false); // Close drawer after selection
+                      }}
+                      activeUnitId={focusUnit?.id || null}
+                      searchQuery={sidebarSearch}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </>
+        )}
       </ModalPortal>
     </div>
   );

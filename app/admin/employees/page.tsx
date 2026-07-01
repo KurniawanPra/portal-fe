@@ -1241,7 +1241,7 @@ export default function ManajemenEmployeePage() {
         {/* ── Advanced Filter Panel (collapsible) ── */}
         {showAdvancedFilter && (
           <div 
-            className="border-b border-amber-100 dark:border-white/[0.06] bg-amber-50/40 dark:bg-gradient-to-br dark:from-[#080d18] dark:via-[#080d18] dark:to-[#060b15] px-5 py-4"
+            className="border-b border-amber-100 dark:border-white/[0.06] bg-white dark:bg-gradient-to-br dark:from-[#080d18] dark:via-[#080d18] dark:to-[#060b15] px-5 py-8"
             style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
           >
             {/* Panel header */}
