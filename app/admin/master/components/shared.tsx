@@ -229,6 +229,7 @@ export function CrudTable<T>({
   emptyText = 'Tidak ada data.',
   data,
   renderRow,
+  containerClassName = '',
 }: {
   headers: string[];
   loading: boolean;
@@ -236,9 +237,10 @@ export function CrudTable<T>({
   emptyText?: string;
   data: T[];
   renderRow: (item: T, index: number) => React.ReactNode;
+  containerClassName?: string;
 }) {
   return (
-    <div className="overflow-x-auto">
+    <div className={cn("overflow-x-auto", containerClassName)}>
       {loading ? (
         <div className="flex items-center justify-center py-20 gap-3">
           <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
@@ -339,6 +341,8 @@ export function CrudPagination({
     </div>
   );
 }
+
+export { CrudPagination as Pagination };
 
 // ─── Form Modal Component ─────────────────────────────────────────────────────
 export function FormModal({

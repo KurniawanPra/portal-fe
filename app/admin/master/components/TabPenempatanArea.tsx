@@ -9,7 +9,7 @@ import { ModalPortal } from '@/components/ui/ModalPortal';
 import { api, ApiRequestError } from '@/lib/api';
 import {
   inputCls, labelCls, Toast, TableCard, DeleteModal,
-  CrudHeader, CrudTable, CrudPagination, FormModal
+  CrudHeader, CrudTable, Pagination, FormModal
 } from './shared';
 
 const googleRoadProvider = (x: number, y: number, z: number) => {
@@ -333,7 +333,7 @@ export default function TabPenempatanArea() {
           )}
         />
 
-        <CrudPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}
@@ -373,7 +373,7 @@ export default function TabPenempatanArea() {
           />
           {errors.nama && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.nama}</span>}
         </div>
-        
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Longitude *</label>
@@ -397,7 +397,7 @@ export default function TabPenempatanArea() {
             />
             {errors.latitude && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.latitude}</span>}
           </div>
-          
+
           <div className="col-span-2 pt-1">
             <button
               type="button"
@@ -484,7 +484,7 @@ export default function TabPenempatanArea() {
                       />
                     )}
                   </Map>
-                  
+
                   {/* Mode 3D Toggle Overlay Button */}
                   <button
                     type="button"
@@ -495,7 +495,7 @@ export default function TabPenempatanArea() {
                     <Layers className={`h-4 w-4 ${mapMode3D ? 'text-indigo-650' : 'text-slate-500'}`} />
                   </button>
                 </div>
-                
+
                 {/* Coordinates Manual Form Inputs inside the Map modal */}
                 <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-3 border border-slate-200/50 dark:border-slate-800/50">
                   <div>
@@ -579,7 +579,7 @@ export default function TabPenempatanArea() {
                       />
                     </Map>
                   )}
-                  
+
                   {/* Mode 3D Toggle Overlay Button */}
                   <button
                     type="button"

@@ -7,7 +7,7 @@ import {
 import { api, ApiRequestError } from '@/lib/api';
 import {
   inputCls, labelCls, Toast, TableCard, DeleteModal,
-  CrudHeader, CrudTable, CrudPagination, FormModal
+  CrudHeader, CrudTable, Pagination, FormModal
 } from './shared';
 
 interface StatusKary {
@@ -156,7 +156,7 @@ export default function TabStatusKaryawan() {
           addButtonText="Tambah Status"
           onAddClick={openCreate}
         />
-        
+
         <CrudTable<StatusKary>
           headers={['Kode Status', 'Nama Status', 'Aksi']}
           loading={loading}
@@ -194,7 +194,7 @@ export default function TabStatusKaryawan() {
           )}
         />
 
-        <CrudPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}

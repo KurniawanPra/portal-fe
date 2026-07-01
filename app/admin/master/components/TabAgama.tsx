@@ -5,7 +5,7 @@ import { BookOpen, Pencil, Trash2 } from 'lucide-react';
 import { api, ApiRequestError } from '@/lib/api';
 import {
   inputCls, labelCls, Toast, TableCard, DeleteModal,
-  CrudHeader, CrudTable, CrudPagination, FormModal
+  CrudHeader, CrudTable, Pagination, FormModal
 } from './shared';
 
 interface Agama {
@@ -173,7 +173,7 @@ export default function TabAgama() {
           )}
         />
 
-        <CrudPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}

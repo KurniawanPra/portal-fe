@@ -9,13 +9,13 @@ import {
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect, SearchSelectOption } from '@/components/ui/SearchSelect';
 import { api, ApiRequestError } from '@/lib/api';
-import { PrimaryButton, FilterDropdown, SecondaryButton, DangerButton, Toast, CrudPagination, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
+import { PrimaryButton, FilterDropdown, SecondaryButton, DangerButton, Toast, Pagination, SearchInput, CrudTable, TableActions } from '@/admin/master/components/shared';
 import { resolveImageUrl } from '@/lib/utils';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 // Backend roles: 'user' | 'super_admin'
 // Frontend display: 'Admin' | 'User'
-type UserRole   = 'Admin' | 'User';
+type UserRole = 'Admin' | 'User';
 type UserStatus = 'Aktif' | 'Suspended';
 
 interface ApiUser {
@@ -69,23 +69,23 @@ const STATUSES: UserStatus[] = ['Aktif', 'Suspended'];
 
 // Color palettes for UI badges and icons
 const ROLE_BADGE: Record<UserRole, string> = {
-  Admin:  'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-  User:   'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
+  Admin: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  User: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20',
 };
 
 const STATUS_BADGE: Record<UserStatus, string> = {
-  Aktif:     'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20',
+  Aktif: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20',
   Suspended: 'bg-rose-500/10 text-rose-600 dark:text-rose-450 border-rose-500/20',
 };
 
 const STATUS_DOT: Record<UserStatus, string> = {
-  Aktif:     'bg-emerald-500 dark:bg-emerald-400',
+  Aktif: 'bg-emerald-500 dark:bg-emerald-400',
   Suspended: 'bg-rose-500 dark:bg-rose-400',
 };
 
 const ROLE_AVATAR: Record<UserRole, string> = {
-  Admin:  'from-amber-400  to-amber-600',
-  User:   'from-indigo-400 to-indigo-600',
+  Admin: 'from-amber-400  to-amber-600',
+  User: 'from-indigo-400 to-indigo-600',
 };
 
 const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
@@ -101,10 +101,10 @@ interface FormData {
 const emptyForm: FormData = { email: '', password: '', role: 'User', status: 'Aktif', employeeId: '' };
 
 export default function ManajemenUserPage() {
-  const [users, setUsers]     = useState<UserData[]>([]);
+  const [users, setUsers] = useState<UserData[]>([]);
   const [allEmployees, setAllEmployees] = useState<EmployeeBrief[]>([]);
-  const [search, setSearch]   = useState('');
-  const [filterRole,   setFilterRole]   = useState<UserRole | 'Semua'>('Semua');
+  const [search, setSearch] = useState('');
+  const [filterRole, setFilterRole] = useState<UserRole | 'Semua'>('Semua');
   const [filterStatus, setFilterStatus] = useState<UserStatus | 'Semua'>('Semua');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -118,21 +118,19 @@ export default function ManajemenUserPage() {
   const roleDropdownRef = useRef<HTMLDivElement>(null);
   const statusDropdownRef = useRef<HTMLDivElement>(null);
 
-  const [modalOpen,    setModalOpen]    = useState(false);
-  const [editTarget,   setEditTarget]   = useState<UserData | null>(null);
-  const [form,         setForm]         = useState<FormData>(emptyForm);
-  const [errors,       setErrors]       = useState<Record<string, string>>({});
-  const [saving,       setSaving]       = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<UserData | null>(null);
-  const [deleting,     setDeleting]     = useState(false);
-  const [toast,        setToast]        = useState<{ type:'ok'|'err'; text:string } | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<UserData | null>(null);
+  const [form, setForm] = useState<FormData>(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [reset2faTarget, setReset2faTarget] = useState<UserData | null>(null);
   const [resetPasskeyTarget, setResetPasskeyTarget] = useState<UserData | null>(null);
   const [resettingMfa, setResettingMfa] = useState(false);
 
 
 
-  const showToast = (type: 'ok'|'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
+  const showToast = (type: 'ok' | 'err', text: string) => { setToast({ type, text }); setTimeout(() => setToast(null), 3200); };
 
   // ─── Fetch Data ───────────────────────────────────────────────────────────
   const fetchUsers = useCallback(async () => {
@@ -140,7 +138,7 @@ export default function ManajemenUserPage() {
       const [usersRes, employeesRes] = await Promise.all([
         api.get<ApiUser[]>('/users?limit=200'),
         api.get<EmployeeBrief[]>('/employees?limit=200'),
-      ]); 
+      ]);
 
       const empMap = new Map<string, EmployeeBrief>();
       (employeesRes.data || []).forEach(e => empMap.set(e.id, e));
@@ -195,43 +193,16 @@ export default function ManajemenUserPage() {
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     return (u.nama.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.nrk.toLowerCase().includes(q))
-      && (filterRole   === 'Semua' || u.role   === filterRole)
+      && (filterRole === 'Semua' || u.role === filterRole)
       && (filterStatus === 'Semua' || u.status === filterStatus);
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const paginatedData = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Employee yang sudah di-assign ke user lain tidak bisa dipilih lagi
-  const assignedEmployeeIds = useMemo(() => new Set(users.filter(u => u.employeeId).map(u => u.employeeId!)), [users]);
-  const availableEmployees = useMemo(() => allEmployees.filter(e => !assignedEmployeeIds.has(e.id)), [allEmployees, assignedEmployeeIds]);
-
-  const employeeOptions = useMemo(() => {
-    const opts: SearchSelectOption[] = [{ value: '', label: '— Tidak dikaitkan —' }];
-    if (editTarget?.employeeId) {
-      const emp = allEmployees.find(e => e.id === editTarget.employeeId);
-      if (emp) {
-        opts.push({
-          value: emp.id,
-          label: `${emp.nama} — ${emp.nrk}`,
-          subLabel: emp.jabatan,
-        });
-      }
-    }
-    availableEmployees
-      .filter(e => e.id !== editTarget?.employeeId)
-      .forEach(emp => {
-        opts.push({
-          value: emp.id,
-          label: `${emp.nama} — ${emp.nrk}`,
-          subLabel: emp.jabatan,
-        });
-      });
-    return opts;
-  }, [editTarget, allEmployees, availableEmployees]);
 
   const openCreate = useCallback(() => { setEditTarget(null); setForm(emptyForm); setErrors({}); setModalOpen(true); }, []);
-  const openEdit   = useCallback((u: UserData) => {
+  const openEdit = useCallback((u: UserData) => {
     setEditTarget(u);
     setErrors({});
     setForm({ email: u.email, password: '', role: u.role, status: u.status, employeeId: u.employeeId ?? '' });
@@ -241,9 +212,49 @@ export default function ManajemenUserPage() {
   // ─── Save (Create/Update) ─────────────────────────────────────────────────
   const handleSave = useCallback(async () => {
     setErrors({});
-    if (!form.email.trim())     { setErrors(e => ({ ...e, email: 'Email wajib diisi.' })); showToast('err', 'Email wajib diisi.'); return; }
+    if (!form.email.trim()) { setErrors(e => ({ ...e, email: 'Email wajib diisi.' })); showToast('err', 'Email wajib diisi.'); return; }
     if (!form.email.includes('@')) { setErrors(e => ({ ...e, email: 'Format email tidak valid.' })); showToast('err', 'Format email tidak valid.'); return; }
-    if (!editTarget && !form.password.trim()) { setErrors(e => ({ ...e, password: 'Password wajib diisi.' })); showToast('err', 'Password wajib diisi untuk user baru.'); return; }
+
+    if (!editTarget) {
+      if (!form.password.trim()) {
+        setErrors(e => ({ ...e, password: 'Password wajib diisi.' }));
+        showToast('err', 'Password wajib diisi untuk user baru.');
+        return;
+      }
+      if (form.password.length < 8) {
+        setErrors(e => ({ ...e, password: 'Password minimal 8 karakter.' }));
+        showToast('err', 'Password minimal 8 karakter.');
+        return;
+      }
+      if (!/[A-Z]/.test(form.password)) {
+        setErrors(e => ({ ...e, password: 'Password harus mengandung huruf kapital.' }));
+        showToast('err', 'Password harus mengandung huruf kapital.');
+        return;
+      }
+      if (!/[0-9]/.test(form.password)) {
+        setErrors(e => ({ ...e, password: 'Password harus mengandung angka.' }));
+        showToast('err', 'Password harus mengandung angka.');
+        return;
+      }
+    } else {
+      if (form.password.trim()) {
+        if (form.password.length < 8) {
+          setErrors(e => ({ ...e, password: 'Password minimal 8 karakter.' }));
+          showToast('err', 'Password minimal 8 karakter.');
+          return;
+        }
+        if (!/[A-Z]/.test(form.password)) {
+          setErrors(e => ({ ...e, password: 'Password harus mengandung huruf kapital.' }));
+          showToast('err', 'Password harus mengandung huruf kapital.');
+          return;
+        }
+        if (!/[0-9]/.test(form.password)) {
+          setErrors(e => ({ ...e, password: 'Password harus mengandung angka.' }));
+          showToast('err', 'Password harus mengandung angka.');
+          return;
+        }
+      }
+    }
 
     setSaving(true);
     try {
@@ -254,7 +265,7 @@ export default function ManajemenUserPage() {
           email: form.email,
           role: mapRoleToApi(form.role),
           isActive,
-          employeeId: form.employeeId || null,
+          employeeId: editTarget.employeeId || null,
         };
         if (form.password.trim()) body.password = form.password;
 
@@ -267,7 +278,7 @@ export default function ManajemenUserPage() {
           password: form.password,
           role: mapRoleToApi(form.role),
           isActive,
-          employeeId: form.employeeId || null,
+          employeeId: null,
         });
         showToast('ok', `"${form.email}" berhasil ditambahkan.`);
       }
@@ -292,22 +303,6 @@ export default function ManajemenUserPage() {
     }
   }, [form, editTarget, fetchUsers]);
 
-  // ─── Delete ───────────────────────────────────────────────────────────────
-  const handleDelete = useCallback(async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await api.delete(`/users/${deleteTarget.id}`);
-      showToast('ok', `"${deleteTarget.nama}" dihapus.`);
-      setDeleteTarget(null);
-      setLoading(true);
-      await fetchUsers();
-    } catch (err) {
-      showToast('err', err instanceof Error ? err.message : 'Gagal menghapus.');
-    } finally {
-      setDeleting(false);
-    }
-  }, [deleteTarget, fetchUsers]);
 
   // ─── Toggle Status ────────────────────────────────────────────────────────
   const toggleStatus = useCallback(async (u: UserData) => {
@@ -357,14 +352,14 @@ export default function ManajemenUserPage() {
     }
   }, [resetPasskeyTarget, fetchUsers]);
 
-    const fmtLogin = (s: string) => {
+  const fmtLogin = (s: string) => {
     if (s === '-') return '-';
-    try { return new Date(s).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
+    try { return new Date(s).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
     catch { return s; }
   };
 
-  const adminCount   = users.filter(u => u.role === 'Admin').length;
-  const activeCount  = users.filter(u => u.status === 'Aktif').length;
+  const adminCount = users.filter(u => u.role === 'Admin').length;
+  const activeCount = users.filter(u => u.status === 'Aktif').length;
   const suspendCount = users.filter(u => u.status === 'Suspended').length;
 
   return (
@@ -372,8 +367,8 @@ export default function ManajemenUserPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type==='ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
-          {toast.type==='ok' ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400"/> : <AlertCircle className="h-4 w-4 shrink-0 text-rose-400"/>}
+        <div className={`fixed top-6 right-6 z-[99999] flex items-center gap-2.5 rounded-xl border px-4 py-3 text-sm font-semibold shadow-2xl backdrop-blur-xl animate-fade-up ${toast.type === 'ok' ? 'bg-[#0f1a10]/95 border-emerald-500/30 text-emerald-300' : 'bg-[#1a0f10]/95 border-rose-500/30 text-rose-300'}`}>
+          {toast.type === 'ok' ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : <AlertCircle className="h-4 w-4 shrink-0 text-rose-400" />}
           {toast.text}
         </div>
       )}
@@ -395,10 +390,10 @@ export default function ManajemenUserPage() {
       {/* Stats — flat inline, no cards */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label:'Total User', value:users.length, icon:Users,       color:'text-amber-600 dark:text-amber-400'   },
-          { label:'Admin',      value:adminCount,   icon:ShieldCheck, color:'text-indigo-650 dark:text-indigo-400'  },
-          { label:'Aktif',      value:activeCount,  icon:UserCheck,   color:'text-emerald-650 dark:text-emerald-450' },
-          { label:'Suspended',  value:suspendCount, icon:ShieldAlert, color:'text-rose-650 dark:text-rose-455'    },
+          { label: 'Total User', value: users.length, icon: Users, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Admin', value: adminCount, icon: ShieldCheck, color: 'text-indigo-650 dark:text-indigo-400' },
+          { label: 'Aktif', value: activeCount, icon: UserCheck, color: 'text-emerald-650 dark:text-emerald-450' },
+          { label: 'Suspended', value: suspendCount, icon: ShieldAlert, color: 'text-rose-650 dark:text-rose-455' },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
@@ -448,14 +443,21 @@ export default function ManajemenUserPage() {
 
         {/* Table */}
         <CrudTable<UserData>
-          headers={['User','NRK / Jabatan','Role','Status','MFA / Keamanan','Login Terakhir','Aksi']}
+          headers={['No', 'User', 'NRK / Jabatan', 'Role', 'Status', 'MFA / Keamanan', 'Login Terakhir', 'Aksi']}
           loading={loading}
           loadingText="Memuat data user..."
           emptyText="Tidak ada user yang sesuai."
           data={paginatedData}
-          renderRow={(u) => (
-            <tr key={u.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
-              {/* User */}
+          containerClassName="hide-scrollbar"
+          renderRow={(u, idx) => {
+            const rowNo = (currentPage - 1) * itemsPerPage + idx + 1;
+            return (
+              <tr key={u.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
+                {/* No */}
+                <td className="px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 font-mono whitespace-nowrap">
+                  {rowNo}
+                </td>
+                {/* User */}
               <td className="px-5 py-3.5">
                 <div className="flex items-center gap-3">
                   {u.fotoProfil ? (
@@ -558,14 +560,13 @@ export default function ManajemenUserPage() {
 
                   <TableActions
                     onEdit={() => openEdit(u)}
-                    onDelete={() => setDeleteTarget(u)}
                   />
                 </div>
               </td>
             </tr>
-          )}
+          ); }}
         />
-        
+
         {/* Pagination Footer */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-4 border-t border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01] text-[11px] font-bold text-slate-550 dark:text-slate-400">
           <div>
@@ -587,7 +588,7 @@ export default function ManajemenUserPage() {
               >
                 Sebelumnya
               </button>
-              
+
               {/* Page Numbers */}
               {Array.from({ length: totalPages }, (_, i) => i + 1)
                 .filter(page => {
@@ -600,11 +601,10 @@ export default function ManajemenUserPage() {
                       {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600">...</span>}
                       <button
                         onClick={() => setCurrentPage(page)}
-                        className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all cursor-pointer focus:outline-none ${
-                          currentPage === page
+                        className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all cursor-pointer focus:outline-none ${currentPage === page
                             ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/20'
                             : 'border border-slate-200/80 dark:border-white/[0.06] bg-white dark:bg-[#0f1623] text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04]'
-                        }`}
+                          }`}
                       >
                         {page}
                       </button>
@@ -632,7 +632,7 @@ export default function ManajemenUserPage() {
             <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
                 <div className="flex items-center gap-2.5">
-                  {editTarget ? <Pencil className="h-4 w-4 text-indigo-500 dark:text-indigo-400"/> : <Plus className="h-4 w-4 text-indigo-500 dark:text-indigo-400"/>}
+                  {editTarget ? <Pencil className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> : <Plus className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />}
                   <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">{editTarget ? 'Edit Data User' : 'Tambah User Baru'}</h2>
                 </div>
                 <button onClick={() => setModalOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer focus:outline-none">
@@ -644,7 +644,7 @@ export default function ManajemenUserPage() {
                   <label className={labelCls}>Email *</label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="email" value={form.email} onChange={e => setForm(f=>({...f, email:e.target.value}))} placeholder="nama@inl.co.id" className={`${inputCls} pl-10 ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="nama@inl.co.id" className={`${inputCls} pl-10 ${errors.email ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   </div>
                   {errors.email && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.email}</span>}
                 </div>
@@ -652,7 +652,7 @@ export default function ManajemenUserPage() {
                   <label className={labelCls}>{editTarget ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password *'}</label>
                   <div className="relative">
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                    <input type="password" value={form.password} onChange={e => setForm(f=>({...f, password:e.target.value}))} placeholder={editTarget ? '••••••••' : 'Min 8 karakter, huruf kapital + angka'} className={`${inputCls} pl-10 ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
+                    <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder={editTarget ? '••••••••' : 'Min 8 karakter, huruf kapital + angka'} className={`${inputCls} pl-10 ${errors.password ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10 dark:border-rose-500/50' : ''}`} />
                   </div>
                   {errors.password && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.password}</span>}
                   {!editTarget && !errors.password && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Min. 8 karakter, mengandung huruf kapital dan angka.</p>}
@@ -687,19 +687,15 @@ export default function ManajemenUserPage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label className={labelCls}>Link ke Employee</label>
-                  <SearchSelect
-                    searchable={true}
-                    options={employeeOptions}
-                    value={form.employeeId ?? ''}
-                    onChange={val => setForm(f => ({ ...f, employeeId: val }))}
-                    placeholder="Pilih Employee"
-                    error={!!errors.employeeId}
-                  />
-                  {errors.employeeId && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.employeeId}</span>}
-                  {!errors.employeeId && <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">Hubungkan akun user ke data employee yang tersedia.</p>}
-                </div>
+                {editTarget && editTarget.employeeId && (
+                  <div className="p-3 rounded-xl border border-slate-100 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]">
+                    <span className={labelCls}>Karyawan Terhubung</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      {editTarget.nama} — {editTarget.nrk}
+                    </span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{editTarget.jabatan}</p>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
                 <button onClick={() => setModalOpen(false)} className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
@@ -712,29 +708,6 @@ export default function ManajemenUserPage() {
         </div>
       </ModalPortal>
 
-      {/* Delete Modal via Portal */}
-      <ModalPortal open={!!deleteTarget}>
-        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setDeleteTarget(null)} />
-        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-sm animate-fade-up">
-            <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl p-6 text-center">
-              <div className="mx-auto mb-4 flex items-center justify-center">
-                <Trash2 className="h-8 w-8 text-rose-500 dark:text-rose-400" />
-              </div>
-              <h3 className="text-base font-black text-slate-800 dark:text-slate-100">Hapus User?</h3>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-                User <span className="font-bold text-slate-800 dark:text-slate-200">&quot;{deleteTarget?.nama}&quot;</span> akan dihapus permanen dari sistem.
-              </p>
-              <div className="mt-5 flex gap-3">
-                <button onClick={() => setDeleteTarget(null)} className="flex-1 rounded-xl border border-slate-200 dark:border-white/[0.08] px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
-                <button onClick={handleDelete} disabled={deleting} className="flex-1 rounded-xl bg-rose-500/90 hover:bg-rose-500 px-4 py-2.5 text-sm font-bold text-white transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-none shadow-lg shadow-rose-500/20 disabled:opacity-50">
-                  {deleting ? <><Loader2 className="h-4 w-4 animate-spin inline mr-1" /> Menghapus...</> : 'Hapus Sekarang'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </ModalPortal>
 
       {/* Reset 2FA Modal via Portal */}
       <ModalPortal open={!!reset2faTarget}>

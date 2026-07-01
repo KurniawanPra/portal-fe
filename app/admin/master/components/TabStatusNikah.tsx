@@ -7,7 +7,7 @@ import {
 import { api, ApiRequestError } from '@/lib/api';
 import {
   inputCls, labelCls, Toast, TableCard, DeleteModal,
-  CrudHeader, CrudTable, CrudPagination, FormModal
+  CrudHeader, CrudTable, Pagination, FormModal
 } from './shared';
 
 interface StatusNikah {
@@ -192,7 +192,7 @@ export default function TabStatusNikah() {
           )}
         />
 
-        <CrudPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}

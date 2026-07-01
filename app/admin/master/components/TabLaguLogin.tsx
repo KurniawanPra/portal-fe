@@ -6,7 +6,7 @@ import { api, ApiRequestError } from '@/lib/api';
 import { getAccessToken } from '@/lib/auth';
 import {
   inputCls, labelCls, Toast, TableCard, DeleteModal,
-  CrudHeader, CrudTable, CrudPagination, FormModal,
+  CrudHeader, CrudTable, Pagination, FormModal,
   PrimaryButton
 } from './shared';
 
@@ -27,7 +27,7 @@ export default function TabLaguLogin() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LoginSong | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<LoginSong | null>(null);
-  
+
   const [form, setForm] = useState({ title: '' });
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,8 +57,8 @@ export default function TabLaguLogin() {
     }
   }, []);
 
-  useEffect(() => { 
-    fetchData(); 
+  useEffect(() => {
+    fetchData();
   }, [fetchData]);
 
   // Audio Preview Lifecycle
@@ -122,7 +122,7 @@ export default function TabLaguLogin() {
 
     initAudioEnhancer();
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume().catch(() => {});
+      audioContextRef.current.resume().catch(() => { });
     }
 
     if (playingSongId === song.id) {
@@ -158,7 +158,7 @@ export default function TabLaguLogin() {
     const newErrors: Record<string, string> = {};
     if (!form.title.trim()) newErrors.title = 'Judul lagu wajib diisi.';
     if (!editTarget && !audioFile) newErrors.file = 'File musik .mp3 wajib diunggah.';
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       showToast('err', 'Harap periksa form kembali.');
@@ -329,7 +329,7 @@ export default function TabLaguLogin() {
           }}
         />
 
-        <CrudPagination
+        <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
           onPageChange={setCurrentPage}

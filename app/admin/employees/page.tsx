@@ -4,7 +4,8 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   Users, Plus, Search, Pencil, Trash2, X, CheckCircle2, AlertCircle,
   Phone, MapPin, Briefcase, Building2, UserCheck, UserX,
-  IdCard, Loader2, ChevronDown, User, FileSpreadsheet, FileUp, FileDown, Download
+  IdCard, Loader2, ChevronDown, User, FileSpreadsheet, FileUp, FileDown, Download,
+  UserPlus, UserCog
 } from 'lucide-react';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { SearchSelect } from '@/components/ui/SearchSelect';
@@ -42,6 +43,11 @@ interface ApiEmployee {
   agama: string | null;
   createdAt: string;
   updatedAt: string;
+  // Joined user fields
+  userId?: string | null;
+  userEmail?: string | null;
+  userRole?: 'super_admin' | 'user' | null;
+  userIsActive?: boolean | null;
 }
 
 interface UnitOrganisasi {
@@ -79,6 +85,11 @@ interface EmployeeData {
   fotoProfil: string;
   atasanId: string;
   agama: string;
+  // Joined user fields
+  userId: string | null;
+  userEmail: string | null;
+  userRole: 'super_admin' | 'user' | null;
+  userIsActive: boolean | null;
 }
 
 // Color palettes
@@ -306,12 +317,18 @@ export default function ManajemenEmployeePage() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // States for optional User account creation
-  const [createUserAccount, setCreateUserAccount] = useState(false);
+  // States for User account creation/edit modal
   const [userEmail, setUserEmail] = useState('');
   const [userPassword, setUserPassword] = useState('');
   const [userRole, setUserRole] = useState<'Admin' | 'User'>('User');
   const [userStatus, setUserStatus] = useState<'Aktif' | 'Suspended'>('Aktif');
+
+  // User Modal State
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userModalEmployee, setUserModalEmployee] = useState<EmployeeData | null>(null);
+  const [userModalEditMode, setUserModalEditMode] = useState(false);
+  const [userErrors, setUserErrors] = useState<Record<string, string>>({});
+  const [userSaving, setUserSaving] = useState(false);
 
   const getUnitPathStr = useCallback((unitId: string) => {
     let curr = unitOrganisasis.find(u => u.id === unitId);
@@ -407,6 +424,10 @@ export default function ManajemenEmployeePage() {
         fotoProfil: e.fotoProfil || '',
         atasanId: e.atasanId || '',
         agama: e.agama || '',
+        userId: e.userId || null,
+        userEmail: e.userEmail || null,
+        userRole: e.userRole || null,
+        userIsActive: e.userIsActive !== undefined ? e.userIsActive : null,
       }));
 
       setEmployees(mapped);
@@ -750,11 +771,6 @@ export default function ManajemenEmployeePage() {
     setUnitDropdownOpen(false);
     setPhotoFile(null);
     setErrors({});
-    setCreateUserAccount(false);
-    setUserEmail('');
-    setUserPassword('');
-    setUserRole('User');
-    setUserStatus('Aktif');
     setModalOpen(true);
   }, []);
 
@@ -805,26 +821,6 @@ export default function ManajemenEmployeePage() {
   const handleSave = useCallback(async () => {
     setErrors({});
 
-    // Client-side validation for user account
-    if (!editTarget && createUserAccount) {
-      const userErrors: Record<string, string> = {};
-      if (!userEmail.trim()) {
-        userErrors.userEmail = 'Email wajib diisi.';
-      } else if (!userEmail.includes('@')) {
-        userErrors.userEmail = 'Format email tidak valid.';
-      }
-      if (!userPassword.trim()) {
-        userErrors.userPassword = 'Password wajib diisi.';
-      } else if (userPassword.length < 8) {
-        userErrors.userPassword = 'Password minimal 8 karakter.';
-      }
-      if (Object.keys(userErrors).length > 0) {
-        setErrors(userErrors);
-        showToast('err', Object.values(userErrors)[0]);
-        return;
-      }
-    }
-
     setSaving(true);
     try {
       const unitId = form.unitPath[form.unitPath.length - 1] || null;
@@ -858,24 +854,7 @@ export default function ManajemenEmployeePage() {
       } else {
         const res = await api.post<any>('/employees', payload);
         employeeId = res.data.id;
-        
-        if (createUserAccount) {
-          try {
-            const userIsActive = userRole === 'Admin' ? true : userStatus === 'Aktif';
-            await api.post('/users', {
-              email: userEmail,
-              password: userPassword,
-              role: userRole === 'Admin' ? 'super_admin' : 'user',
-              isActive: userIsActive,
-              employeeId: employeeId,
-            });
-            showToast('ok', `Employee dan User "${form.nama}" berhasil ditambahkan.`);
-          } catch (userErr: any) {
-            showToast('err', `Employee berhasil ditambahkan, tetapi gagal membuat akun user: ${userErr.message}`);
-          }
-        } else {
-          showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
-        }
+        showToast('ok', `"${form.nama}" berhasil ditambahkan.`);
       }
 
       // Photo upload if selected
@@ -907,7 +886,6 @@ export default function ManajemenEmployeePage() {
           setErrors(apiErrors);
           showToast('err', err.message || 'Validasi gagal.');
         } else {
-          // General API error (like "NIK sudah terdaftar" or "NRK sudah terdaftar")
           const msg = err.message || 'Gagal menyimpan.';
           const newErrors: Record<string, string> = {};
           if (msg.toLowerCase().includes('nrk')) {
@@ -924,7 +902,121 @@ export default function ManajemenEmployeePage() {
     } finally {
       setSaving(false);
     }
-  }, [form, editTarget, photoFile, fetchData, createUserAccount, userEmail, userPassword, userRole, userStatus]);
+  }, [form, editTarget, photoFile, fetchData]);
+
+  // ─── User Modal Actions ────────────────────────────────────────────────────
+  const openUserModal = useCallback((e: EmployeeData, editMode: boolean) => {
+    setUserModalEmployee(e);
+    setUserModalEditMode(editMode);
+    setUserErrors({});
+    
+    if (editMode) {
+      setUserEmail(e.userEmail || '');
+      setUserPassword('');
+      setUserRole(e.userRole === 'super_admin' ? 'Admin' : 'User');
+      setUserStatus(e.userIsActive ? 'Aktif' : 'Suspended');
+    } else {
+      setUserEmail('');
+      setUserPassword('');
+      setUserRole('User');
+      setUserStatus('Aktif');
+    }
+    setUserModalOpen(true);
+  }, []);
+
+  const handleUserSave = useCallback(async () => {
+    setUserErrors({});
+    if (!userModalEmployee) return;
+
+    const errorsMap: Record<string, string> = {};
+    if (!userEmail.trim()) {
+      errorsMap.userEmail = 'Email wajib diisi.';
+    } else if (!userEmail.includes('@')) {
+      errorsMap.userEmail = 'Format email tidak valid.';
+    }
+
+    if (!userModalEditMode) {
+      if (!userPassword.trim()) {
+        errorsMap.userPassword = 'Password wajib diisi.';
+      } else {
+        if (userPassword.length < 8) {
+          errorsMap.userPassword = 'Password minimal 8 karakter.';
+        }
+        if (!/[A-Z]/.test(userPassword)) {
+          errorsMap.userPassword = 'Password harus mengandung huruf kapital.';
+        }
+        if (!/[0-9]/.test(userPassword)) {
+          errorsMap.userPassword = 'Password harus mengandung angka.';
+        }
+      }
+    } else {
+      if (userPassword.trim()) {
+        if (userPassword.length < 8) {
+          errorsMap.userPassword = 'Password minimal 8 karakter.';
+        }
+        if (!/[A-Z]/.test(userPassword)) {
+          errorsMap.userPassword = 'Password harus mengandung huruf kapital.';
+        }
+        if (!/[0-9]/.test(userPassword)) {
+          errorsMap.userPassword = 'Password harus mengandung angka.';
+        }
+      }
+    }
+
+    if (Object.keys(errorsMap).length > 0) {
+      setUserErrors(errorsMap);
+      showToast('err', Object.values(errorsMap)[0]);
+      return;
+    }
+
+    setUserSaving(true);
+    try {
+      const roleApi = userRole === 'Admin' ? 'super_admin' : 'user';
+      const isActiveApi = userRole === 'Admin' ? true : userStatus === 'Aktif';
+
+      if (userModalEditMode && userModalEmployee.userId) {
+        // Edit User
+        const payload: any = {
+          email: userEmail,
+          role: roleApi,
+          isActive: isActiveApi,
+        };
+        if (userPassword.trim()) {
+          payload.password = userPassword;
+        }
+        await api.put(`/users/${userModalEmployee.userId}`, payload);
+        showToast('ok', `Akun user "${userEmail}" berhasil diperbarui.`);
+      } else {
+        // Tambah User
+        await api.post('/users', {
+          email: userEmail,
+          password: userPassword,
+          role: roleApi,
+          isActive: isActiveApi,
+          employeeId: userModalEmployee.id,
+        });
+        showToast('ok', `Akun user "${userEmail}" berhasil dibuat.`);
+      }
+
+      setUserModalOpen(false);
+      await fetchData();
+    } catch (err: any) {
+      if (err instanceof ApiRequestError && err.details && Array.isArray(err.details)) {
+        const apiErrors: Record<string, string> = {};
+        err.details.forEach((d: any) => {
+          let field = d.field;
+          if (field === 'isActive') field = 'userStatus';
+          apiErrors[field] = d.message;
+        });
+        setUserErrors(apiErrors);
+        showToast('err', err.message || 'Gagal menyimpan akun user.');
+      } else {
+        showToast('err', err instanceof Error ? err.message : 'Gagal menyimpan akun user.');
+      }
+    } finally {
+      setUserSaving(false);
+    }
+  }, [userModalEmployee, userModalEditMode, userEmail, userPassword, userRole, userStatus, fetchData]);
 
   // ─── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async () => {
@@ -1062,15 +1154,22 @@ export default function ManajemenEmployeePage() {
 
         {/* Table */}
         <CrudTable<EmployeeData>
-          headers={['Employee', 'NIK', 'Jabatan / Unit', 'Jenis Kelamin', 'Penempatan', 'Status Pernikahan', 'Status', 'Tgl Masuk', 'Aksi']}
+          headers={['No', 'Employee', 'NIK', 'Jabatan / Unit', 'Jenis Kelamin', 'Penempatan', 'Status Pernikahan', 'Status', 'Tgl Masuk', 'Akun Login', 'Aksi']}
           loading={loading}
           loadingText="Memuat data employee..."
           emptyText="Tidak ada employee yang sesuai."
           data={paginatedData}
-          renderRow={(e) => (
-            <tr key={e.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
-              {/* Employee */}
-              <td className="px-5 py-3.5">
+          containerClassName="hide-scrollbar"
+          renderRow={(e, idx) => {
+            const rowNo = (currentPage - 1) * itemsPerPage + idx + 1;
+            return (
+              <tr key={e.id} className="group hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition-colors duration-150">
+                {/* No */}
+                <td className="px-5 py-3.5 text-xs font-bold text-slate-400 dark:text-slate-500 font-mono whitespace-nowrap">
+                  {rowNo}
+                </td>
+                {/* Employee */}
+                <td className="px-5 py-3.5 whitespace-nowrap">
                 <div className="flex items-center gap-3">
                   {e.fotoProfil ? (
                     <img
@@ -1093,11 +1192,11 @@ export default function ManajemenEmployeePage() {
                 </div>
               </td>
               {/* NIK */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap">
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono">{e.nik}</p>
               </td>
               {/* Jabatan / Unit */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap min-w-[220px]">
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{e.jabatan}</p>
                 <div className="flex items-center gap-1 mt-0.5">
                   <Building2 className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
@@ -1105,32 +1204,54 @@ export default function ManajemenEmployeePage() {
                 </div>
               </td>
               {/* Jenis Kelamin */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap">
                 <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${GENDER_BADGE[e.jenisKelamin]}`}>
                   {e.jenisKelamin === 'L' ? 'Laki-laki' : 'Perempuan'}
                 </span>
               </td>
               {/* Penempatan */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap">
                 <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{e.penempatanAreaNama}</p>
               </td>
               {/* Status Pernikahan */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap">
                 <span className="rounded bg-slate-100 dark:bg-white/[0.06] px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-slate-600 dark:text-slate-400">
                   {e.statusPernikahanKode}
                 </span>
               </td>
               {/* Status */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap">
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${STATUS_BADGE[String(e.isActive)]}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[String(e.isActive)]}`} />
                   {e.isActive ? 'Aktif' : 'Non-Aktif'}
                 </span>
               </td>
               {/* Tgl Masuk */}
-              <td className="px-5 py-3.5 text-xs font-bold text-slate-550 dark:text-slate-500">{fmtDate(e.tanggalMasuk)}</td>
+              <td className="px-5 py-3.5 text-xs font-bold text-slate-550 dark:text-slate-500 whitespace-nowrap">{fmtDate(e.tanggalMasuk)}</td>
+              {/* Akun Login */}
+              <td className="px-5 py-3.5 whitespace-nowrap">
+                {e.userId ? (
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${e.userIsActive ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border border-emerald-500/20' : 'border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-455'}`}>
+                      {e.userIsActive ? 'Aktif' : 'Suspended'}
+                    </span>
+                    <button title="Edit User" onClick={() => openUserModal(e, true)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-indigo-500/10 hover:text-indigo-500 transition-all cursor-pointer focus:outline-none shrink-0">
+                      <UserCog className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Belum Ada</span>
+                    <button title="Tambah User" onClick={() => openUserModal(e, false)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-emerald-500/10 hover:text-emerald-500 transition-all cursor-pointer focus:outline-none shrink-0">
+                      <UserPlus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+              </td>
               {/* Actions */}
-              <td className="px-5 py-3.5">
+              <td className="px-5 py-3.5 whitespace-nowrap">
                 <div className="flex items-center justify-end gap-1">
                   {e.isActive ? (
                     <button title="Non-Aktifkan" onClick={() => toggleStatus(e)}
@@ -1150,7 +1271,7 @@ export default function ManajemenEmployeePage() {
                 </div>
               </td>
             </tr>
-          )}
+          ); }}
         />
         <CrudPagination
           currentPage={currentPage}
@@ -1343,87 +1464,6 @@ export default function ManajemenEmployeePage() {
                 </button>
               </div>
               <div className="px-5 py-5 space-y-4 max-h-[65vh] overflow-y-auto hide-scrollbar">
-                {/* Checkbox buat User atau Employee saja */}
-                {!editTarget && (
-                  <div className={`p-4 rounded-2xl border transition-all duration-200 ${createUserAccount ? 'border-amber-500/25 bg-amber-500/[0.02] dark:bg-amber-500/[0.01]' : 'border-slate-150 dark:border-white/[0.04] bg-slate-50/50 dark:bg-white/[0.01]'} space-y-4`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">Buat Akun User Login</span>
-                        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">Karyawan ini otomatis dibuatkan akun untuk login ke portal</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setCreateUserAccount(!createUserAccount)}
-                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${createUserAccount ? 'bg-amber-500' : 'bg-slate-200 dark:bg-slate-800'}`}
-                      >
-                        <span
-                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${createUserAccount ? 'translate-x-5' : 'translate-x-0'}`}
-                        />
-                      </button>
-                    </div>
-
-                    {createUserAccount && (
-                      <div className="space-y-3 pt-4 border-t border-slate-200/50 dark:border-white/[0.04] animate-fade-in">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className={labelCls}>Email User *</label>
-                            <input
-                              type="email"
-                              value={userEmail}
-                              onChange={(e) => setUserEmail(e.target.value)}
-                              placeholder="nama@inl.co.id"
-                              className={`${inputCls} ${errors.userEmail ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`}
-                            />
-                            {errors.userEmail && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.userEmail}</span>}
-                          </div>
-                          <div>
-                            <label className={labelCls}>Password User *</label>
-                            <input
-                              type="password"
-                              value={userPassword}
-                              onChange={(e) => setUserPassword(e.target.value)}
-                              placeholder="Min 8 karakter, huruf + angka"
-                              className={`${inputCls} ${errors.userPassword ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`}
-                            />
-                            {errors.userPassword && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{errors.userPassword}</span>}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className={labelCls}>Role Akses *</label>
-                            <SearchSelect
-                              searchable={false}
-                              options={[
-                                { value: 'Admin', label: 'Admin' },
-                                { value: 'User', label: 'User' },
-                              ]}
-                              value={userRole}
-                              onChange={(val) => {
-                                const nextRole = val as 'Admin' | 'User';
-                                setUserRole(nextRole);
-                              }}
-                              placeholder="- Pilih Role -"
-                            />
-                          </div>
-                          <div>
-                            <label className={labelCls}>Status Akun *</label>
-                            <SearchSelect
-                              searchable={false}
-                              disabled={userRole === 'Admin'}
-                              options={[
-                                { value: 'Aktif', label: 'Aktif' },
-                                { value: 'Suspended', label: 'Suspended' },
-                              ]}
-                              value={userRole === 'Admin' ? 'Aktif' : userStatus}
-                              onChange={(val) => setUserStatus(val as 'Aktif' | 'Suspended')}
-                              placeholder="- Pilih Status -"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {/* Nama */}
                 <div>
@@ -1848,6 +1888,95 @@ export default function ManajemenEmployeePage() {
                 <PrimaryButton onClick={handleSave} disabled={saving} className="flex items-center gap-2">
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                   {editTarget ? 'Simpan Perubahan' : 'Tambahkan'}
+                </PrimaryButton>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ModalPortal>
+
+      {/* User Form Modal via Portal */}
+      <ModalPortal open={userModalOpen}>
+        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm" onClick={() => setUserModalOpen(false)} />
+        <div className="absolute inset-0 flex items-center justify-center p-4 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-lg animate-fade-up">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-white/[0.08] bg-white dark:bg-[#0d1218] shadow-2xl">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-150 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2.5">
+                  {userModalEditMode ? <UserCog className="h-4 w-4 text-indigo-500 dark:text-indigo-400" /> : <UserPlus className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />}
+                  <h2 className="text-sm font-black text-slate-800 dark:text-slate-100">
+                    {userModalEditMode ? `Edit Akun User: ${userModalEmployee?.nama}` : `Buat Akun User: ${userModalEmployee?.nama}`}
+                  </h2>
+                </div>
+                <button onClick={() => setUserModalOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-700 dark:hover:text-slate-300 transition-all cursor-pointer focus:outline-none">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="px-5 py-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Email User *</label>
+                    <input
+                      type="email"
+                      value={userEmail}
+                      onChange={(e) => setUserEmail(e.target.value)}
+                      placeholder="nama@inl.co.id"
+                      className={`${inputCls} ${userErrors.userEmail ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`}
+                    />
+                    {userErrors.userEmail && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{userErrors.userEmail}</span>}
+                  </div>
+                  <div>
+                    <label className={labelCls}>
+                      {userModalEditMode ? 'Password Baru (kosongkan jika tidak diubah)' : 'Password User *'}
+                    </label>
+                    <input
+                      type="password"
+                      value={userPassword}
+                      onChange={(e) => setUserPassword(e.target.value)}
+                      placeholder={userModalEditMode ? '••••••••' : 'Min 8 karakter, huruf + angka'}
+                      className={`${inputCls} ${userErrors.userPassword ? '!border-rose-500 focus:!border-rose-500 focus:ring-rose-500/10' : ''}`}
+                    />
+                    {userErrors.userPassword && <span className="text-[10px] text-rose-500 mt-1 block font-bold">{userErrors.userPassword}</span>}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={labelCls}>Role Akses *</label>
+                    <SearchSelect
+                      searchable={false}
+                      options={[
+                        { value: 'Admin', label: 'Admin' },
+                        { value: 'User', label: 'User' },
+                      ]}
+                      value={userRole}
+                      onChange={(val) => {
+                        const nextRole = val as 'Admin' | 'User';
+                        setUserRole(nextRole);
+                      }}
+                      placeholder="- Pilih Role -"
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Status Akun *</label>
+                    <SearchSelect
+                      searchable={false}
+                      disabled={userRole === 'Admin'}
+                      options={[
+                        { value: 'Aktif', label: 'Aktif' },
+                        { value: 'Suspended', label: 'Suspended' },
+                      ]}
+                      value={userRole === 'Admin' ? 'Aktif' : userStatus}
+                      onChange={(val) => setUserStatus(val as 'Aktif' | 'Suspended')}
+                      placeholder="- Pilih Status -"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 border-t border-slate-150 dark:border-white/[0.06] px-5 py-4">
+                <button onClick={() => setUserModalOpen(false)} disabled={userSaving} className="rounded-xl border border-slate-250 dark:border-white/[0.08] px-4 py-2 text-sm font-bold text-slate-550 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/[0.04] hover:text-slate-700 dark:hover:text-slate-200 transition-all cursor-pointer focus:outline-none">Batal</button>
+                <PrimaryButton onClick={handleUserSave} disabled={userSaving} className="flex items-center gap-2">
+                  {userSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {userModalEditMode ? 'Simpan Perubahan' : 'Buat Akun'}
                 </PrimaryButton>
               </div>
             </div>
