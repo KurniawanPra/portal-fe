@@ -7,7 +7,7 @@ import { LiquidButton } from '@/components/animate-ui/components/buttons/liquid'
 import { Checkbox } from '@/components/animate-ui/components/headless/checkbox';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { api } from '@/lib/api';
-import { saveTokens } from '@/lib/auth';
+import { getAccessToken, saveTokens } from '@/lib/auth';
 
 interface MessageState {
   type: 'error' | 'ok';
@@ -97,6 +97,38 @@ export default function LoginCard() {
   };
 
   useEffect(() => {
+    const token = getAccessToken();
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        if (payload.role === 'super_admin') {
+          router.replace('/admin');
+        } else {
+          router.replace('/dashboard');
+        }
+        return;
+      } catch (e) {
+        router.replace('/dashboard');
+        return;
+      }
+    }
+
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => {
+        if (res.ok) {
+          return res.json();
+        }
+        throw new Error('Not authenticated');
+      })
+      .then(json => {
+        if (json.success && json.data.role === 'super_admin') {
+          router.replace('/admin');
+        } else {
+          router.replace('/dashboard');
+        }
+      })
+      .catch(() => {});
+
     const isRemembered = localStorage.getItem('portal_remember') === 'true';
     if (isRemembered) {
       setEmail(localStorage.getItem('portal_email') || '');
@@ -106,7 +138,7 @@ export default function LoginCard() {
     }
 
     localStorage.removeItem('portal_password');
-  }, []);
+  }, [router]);
 
 
   const handlePasskeyLogin = async () => {

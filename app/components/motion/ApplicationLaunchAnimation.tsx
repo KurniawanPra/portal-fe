@@ -9,7 +9,16 @@ interface LaunchState {
 }
 
 interface LaunchContextValue {
-  launchApp: (opts: { appName: string; url: string; iconElement?: HTMLElement | null; onBeforeRedirect?: () => Promise<void> }) => void;
+  launchApp: (opts: { 
+    appName: string; 
+    url: string; 
+    iconElement?: HTMLElement | null; 
+    openedWindow?: Window | null; 
+    targetWindow?: Window | null; 
+    icon?: string;
+    skipRedirect?: boolean;
+    onBeforeRedirect?: () => Promise<void>;
+  }) => void;
   launchingApp: string | null;
 }
 
@@ -25,8 +34,25 @@ export function ApplicationLaunchProvider({ children }: { children: React.ReactN
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const launchApp = useCallback(
-    async (opts: { appName: string; url: string; iconElement?: HTMLElement | null; onBeforeRedirect?: () => Promise<void> }) => {
+    async (opts: { 
+      appName: string; 
+      url: string; 
+      iconElement?: HTMLElement | null; 
+      openedWindow?: Window | null; 
+      targetWindow?: Window | null; 
+      icon?: string;
+      skipRedirect?: boolean;
+      onBeforeRedirect?: () => Promise<void>;
+    }) => {
       const rect = opts.iconElement?.getBoundingClientRect() ?? null;
+      const iconQuery = opts.icon ? `&icon=${encodeURIComponent(opts.icon)}` : '';
+      const pendingUrl = `/launch?app=${encodeURIComponent(opts.appName)}${iconQuery}`;
+      const activeWindow = opts.openedWindow ?? opts.targetWindow;
+      const targetWindow = activeWindow ?? window.open(pendingUrl, '_blank');
+      if (targetWindow) {
+        targetWindow.opener = null;
+      }
+
       setLaunch({ appName: opts.appName, iconRect: rect });
 
       if (opts.onBeforeRedirect) {
@@ -34,7 +60,17 @@ export function ApplicationLaunchProvider({ children }: { children: React.ReactN
       }
 
       timeoutRef.current = setTimeout(() => {
-        window.open(opts.url, '_blank', 'noopener,noreferrer');
+        if (!opts.skipRedirect) {
+          try {
+            if (targetWindow && !targetWindow.closed) {
+              targetWindow.location.href = opts.url;
+            } else {
+              window.location.href = opts.url;
+            }
+          } catch {
+            window.location.href = opts.url;
+          }
+        }
         setTimeout(() => setLaunch(null), 200);
       }, 650);
     },

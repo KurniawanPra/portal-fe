@@ -46,35 +46,25 @@ async function tryRefreshToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     const refreshToken = getRefreshToken();
-    if (!refreshToken) {
-      console.warn('[Auth] Token refresh aborted: No refresh token found in localStorage.');
-      return false;
-    }
-
     try {
-      console.log('[Auth] Attempting token refresh...');
       const res = await fetch(`${BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        credentials: 'include',
+        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
       });
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error(`[Auth] Refresh request failed with status ${res.status}:`, errorText);
         return false;
       }
 
       const json = await res.json();
       if (json.success) {
-        console.log('[Auth] Token refresh successful. Saving new tokens.');
         saveTokens(json.data.accessToken, json.data.refreshToken);
         return true;
       }
-      console.warn('[Auth] Token refresh returned success=false:', json);
       return false;
     } catch (err) {
-      console.error('[Auth] Token refresh threw an exception:', err);
       return false;
     } finally {
       isRefreshing = false;
@@ -107,39 +97,29 @@ export async function apiFetch<T = unknown>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  let res = await fetch(url, { ...options, headers });
+  let res = await fetch(url, { ...options, headers, credentials: 'include' });
 
   // If 401, try refresh token once
   if (res.status === 401) {
-    if (token) {
-      console.warn(`[API] Request to "${endpoint}" returned 401. Attempting token refresh...`);
-      const refreshed = await tryRefreshToken();
-      if (refreshed) {
-        console.log(`[API] Refresh succeeded. Retrying request to "${endpoint}"...`);
-        const newToken = getAccessToken();
-        if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
-        res = await fetch(url, { ...options, headers });
-        if (res.status !== 401) {
-          // If retried request succeeds, handle it and return
-          if (res.status === 204) {
-            return { success: true, data: null as T };
-          }
-          const json = await res.json();
-          if (!json.success) {
-            const apiErr = json as ApiError;
-            throw new ApiRequestError(apiErr.error || 'Request gagal', apiErr.details);
-          }
-          return json as ApiResponse<T>;
+    const canRefresh = endpoint !== '/auth/refresh' && !endpoint.startsWith('/auth/login');
+    const refreshed = canRefresh ? await tryRefreshToken() : false;
+    if (refreshed) {
+      const newToken = getAccessToken();
+      if (newToken) headers['Authorization'] = `Bearer ${newToken}`;
+      res = await fetch(url, { ...options, headers, credentials: 'include' });
+      if (res.status !== 401) {
+        if (res.status === 204) {
+          return { success: true, data: null as T };
         }
-        console.warn(`[API] Retried request to "${endpoint}" still returned 401.`);
-      } else {
-        console.error('[API] Token refresh failed.');
+        const json = await res.json();
+        if (!json.success) {
+          const apiErr = json as ApiError;
+          throw new ApiRequestError(apiErr.error || 'Request gagal', apiErr.details);
+        }
+        return json as ApiResponse<T>;
       }
-    } else {
-      console.warn(`[API] Request to "${endpoint}" returned 401, but no access token is available to refresh.`);
     }
 
-    console.error('[API] Session expired. Clearing tokens and redirecting to login.');
     clearTokens();
     if (typeof window !== 'undefined') {
       window.location.href = '/login';

@@ -64,6 +64,11 @@ export default function DashboardLayout({
         const meRes = await api.get<MeResponse>('/auth/me');
         const user = meRes.data;
 
+        if (user.role === 'super_admin') {
+          router.push('/admin');
+          return;
+        }
+
         if (user.employeeId) {
           const empRes = await api.get<any>(`/employees/${user.employeeId}`);
           const emp = empRes.data;
@@ -90,7 +95,7 @@ export default function DashboardLayout({
           cachedEmployee = profile;
         } else {
           let nameFallback = 'Administrator';
-          let titleFallback = user.role === 'super_admin' ? 'Super Admin' : 'Admin';
+          let titleFallback = 'Admin';
           let bagianFallback = 'Portal Admin';
 
           if (user.email === 'admin@inl.co.id') {
@@ -103,7 +108,7 @@ export default function DashboardLayout({
               .split(/[\._-]/)
               .map(part => part.charAt(0).toUpperCase() + part.slice(1))
               .join(' ');
-            titleFallback = user.role === 'super_admin' ? 'Super Admin' : 'User Portal';
+            titleFallback = 'User Portal';
             bagianFallback = 'Non-Karyawan';
           }
 

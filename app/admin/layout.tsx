@@ -6,7 +6,7 @@ import AdminSidebar from '@/components/admin/Sidebar';
 import Navbar from '@/components/dashboard/Navbar';
 import { SidebarProvider, SidebarInset } from '@/components/animate-ui/components/radix/sidebar';
 import { api } from '@/lib/api';
-import { getAccessToken, clearTokens } from '@/lib/auth';
+import { clearTokens } from '@/lib/auth';
 import { Loader2 } from 'lucide-react';
 
 interface MeResponse {
@@ -44,11 +44,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return;
     }
     const checkAuth = async () => {
-      const token = getAccessToken();
-      if (!token) {
-        router.push('/login');
-        return;
-      }
       try {
         const res = await api.get<MeResponse>('/auth/me');
         const user = res.data;

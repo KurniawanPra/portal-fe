@@ -219,6 +219,13 @@ const getAuthBadgeClass = (appName: string, authMode: string) => {
   }
 };
 
+function normalizeAppUrl(url: string) {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^[a-z][a-z\d+\-.]*:\/\//i.test(trimmed) || trimmed.startsWith('/')) return trimmed;
+  return `https://${trimmed}`;
+}
+
 export default function AppCardGrid({ apps, searchQuery, showUuid = false, columns = 3, isEmployee = true }: AppCardGridProps) {
   const { launchApp, launchingApp } = useLaunchApp();
   const [modal, setModal] = useState<{
@@ -241,14 +248,16 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
     )
     .sort((a, b) => a.urutan - b.urutan);
 
-  const handleOpenApp = async (e: React.MouseEvent<HTMLAnchorElement>, app: Aplikasi) => {
+  const handleOpenApp = async (e: React.MouseEvent<HTMLButtonElement>, app: Aplikasi) => {
     e.preventDefault();
     const cardElement = e.currentTarget.closest('[data-app-card]') as HTMLElement | null;
+    const launchUrl = `/launch?app=${encodeURIComponent(app.nama)}`;
 
     if (app.auth_mode !== 'sso') {
+      const appUrl = normalizeAppUrl(app.url);
       launchApp({
         appName: app.nama,
-        url: app.url,
+        url: appUrl,
         iconElement: cardElement,
         onBeforeRedirect: async () => {
           try {
@@ -270,25 +279,19 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
       return;
     }
 
-    try {
-      const res = await api.get<{ token: string; redirectUrl: string }>(`/sso/token?app_id=${app.id}`);
-      const token = res.data.token;
-      const baseUrl = res.data.redirectUrl || app.url;
-      const separator = baseUrl.includes('?') ? '&' : '?';
-      const finalUrl = `${baseUrl}${separator}token=${token}`;
-      launchApp({ appName: app.nama, url: finalUrl, iconElement: cardElement });
-    } catch (err: any) {
-      const msg: string =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        'Gagal menginisialisasi login SSO.';
-      setModal({
-        isOpen: true,
-        title: 'Gagal Membuka Aplikasi',
-        message: msg,
-      });
+    const openedWindow = window.open(launchUrl, '_blank');
+    if (openedWindow) {
+      openedWindow.opener = null;
     }
+
+    launchApp({
+      appName: app.nama,
+      url: launchUrl,
+      iconElement: cardElement,
+      openedWindow: openedWindow,
+      icon: app.icon,
+      skipRedirect: true
+    });
   };
 
   return (
@@ -372,10 +375,8 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
                       </span>
 
                       {/* Right: BUKA Pill Button */}
-                      <a
-                        href={app.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        type="button"
                         onClick={(e) => handleOpenApp(e, app)}
                         className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
                           isLockedSso 
@@ -384,7 +385,7 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
                         }`}
                       >
                         {isLockedSso ? 'TERKUNCI' : 'BUKA'}
-                      </a>
+                      </button>
                     </div>
                   </div>
 
@@ -401,9 +402,6 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
             
             {/* Header / Icon */}
             <div className="flex items-start gap-4">
-              {/* <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950/30 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/30">
-                <ShieldAlert className="h-5 w-5" />
-              </div> */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
                   {modal.title}

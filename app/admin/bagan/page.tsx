@@ -235,6 +235,20 @@ function OrgTreeNode({
   const leader = topEmployees[0] ?? null;
   const staffCount = unitEmployees.length;
 
+  // Sub-card employees: those with grade level below maxGradeLevel, grouped by grade DESC
+  const subEmployeeGroups = useMemo(() => {
+    const others = unitEmployees.filter(e => getGradeInfo(e.gradeId).level < maxGradeLevel);
+    if (others.length === 0) return [];
+    const gradeMap = new Map<string, { gradeInfo: any; employees: any[] }>();
+    others.forEach(e => {
+      const gi = getGradeInfo(e.gradeId);
+      const key = e.gradeId || 'no-grade';
+      if (!gradeMap.has(key)) gradeMap.set(key, { gradeInfo: gi, employees: [] });
+      gradeMap.get(key)!.employees.push(e);
+    });
+    return Array.from(gradeMap.values()).sort((a, b) => b.gradeInfo.level - a.gradeInfo.level);
+  }, [unitEmployees, maxGradeLevel, getGradeInfo]);
+
   if (node.isDummy) {
     return (
       <div className="flex flex-col items-center relative animate-fade-in">
@@ -286,21 +300,6 @@ function OrgTreeNode({
   const isFunctional = node.nama.toLowerCase().includes('marketing') || 
                        node.nama.toLowerCase().includes('sourcing') || 
                        node.nama.toLowerCase().includes('sales');
-
-  // Sub-card employees: those with grade level below maxGradeLevel, grouped by grade DESC
-  const subEmployeeGroups = useMemo(() => {
-    const others = unitEmployees.filter(e => getGradeInfo(e.gradeId).level < maxGradeLevel);
-    if (others.length === 0) return [];
-    const gradeMap = new Map<string, { gradeInfo: any; employees: any[] }>();
-    others.forEach(e => {
-      const gi = getGradeInfo(e.gradeId);
-      const key = e.gradeId || 'no-grade';
-      if (!gradeMap.has(key)) gradeMap.set(key, { gradeInfo: gi, employees: [] });
-      gradeMap.get(key)!.employees.push(e);
-    });
-    // Sort descending so highest-rank sub-group appears first (closest to main card)
-    return Array.from(gradeMap.values()).sort((a, b) => b.gradeInfo.level - a.gradeInfo.level);
-  }, [unitEmployees, maxGradeLevel, getGradeInfo]);
 
   return (
     <div className="flex flex-col items-center relative animate-fade-in">
@@ -700,6 +699,8 @@ export default function BaganOrganisasiPage() {
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
+  const [mobileSidebarExpanded, setMobileSidebarExpanded] = useState(false);
+  const [mobileSidebarZoom, setMobileSidebarZoom] = useState(1);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
 
@@ -2276,45 +2277,96 @@ export default function BaganOrganisasiPage() {
               className="fixed inset-0 z-40 bg-slate-950/45 backdrop-blur-sm md:hidden animate-fade-in"
               onClick={() => setShowMobileSidebar(false)}
             />
-            <div className="fixed inset-y-0 left-0 w-80 max-w-[85vw] bg-white dark:bg-[#0f1623] border-r border-slate-200 dark:border-white/[0.06] z-50 md:hidden flex flex-col p-4 shadow-2xl animate-in slide-in-from-left duration-200">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06] mb-4">
-                <div className="flex items-center gap-2">
-                  <GitBranch className="h-4 w-4 text-amber-500" />
-                  <span className="text-sm font-bold text-slate-800 dark:text-white">Hierarki Organisasi</span>
+            <div
+              className="fixed inset-y-0 left-0 bg-white dark:bg-[#0f1623] border-r border-slate-200 dark:border-white/[0.06] z-50 md:hidden flex flex-col p-3 shadow-2xl animate-in slide-in-from-left duration-200 transition-[width] overflow-hidden"
+              style={{ width: mobileSidebarExpanded ? '100vw' : 'min(88vw, 360px)' }}
+            >
+              <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div className="flex min-w-0 items-center gap-2">
+                  <GitBranch className="h-4 w-4 text-amber-500 shrink-0" />
+                  <span className="truncate text-sm font-bold text-slate-800 dark:text-white">Hierarki Organisasi</span>
                 </div>
-                <button
-                  onClick={() => setShowMobileSidebar(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setMobileSidebarExpanded(v => !v)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200 transition-colors"
+                    title={mobileSidebarExpanded ? 'Perkecil panel' : 'Perbesar panel'}
+                  >
+                    {mobileSidebarExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={() => setShowMobileSidebar(false)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-white/[0.06] dark:hover:text-slate-200 transition-colors"
+                    title="Collapse panel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 py-3">
+                <div className="relative min-w-0 flex-1">
+                  <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={sidebarSearch}
+                    onChange={e => setSidebarSearch(e.target.value)}
+                    placeholder="Cari unit..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] py-2 pl-9 pr-3 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10"
+                  />
+                </div>
+                <div className="flex shrink-0 items-center rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.03] p-1">
+                  <button
+                    onClick={() => setMobileSidebarZoom(z => Math.max(0.85, Number((z - 0.1).toFixed(2))))}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800 dark:hover:bg-white/[0.06] dark:hover:text-slate-200"
+                    title="Perkecil isi"
+                  >
+                    <ZoomOut className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="w-10 text-center text-[10px] font-black text-slate-500 dark:text-slate-400">
+                    {Math.round(mobileSidebarZoom * 100)}%
+                  </span>
+                  <button
+                    onClick={() => setMobileSidebarZoom(z => Math.min(1.3, Number((z + 0.1).toFixed(2))))}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800 dark:hover:bg-white/[0.06] dark:hover:text-slate-200"
+                    title="Perbesar isi"
+                  >
+                    <ZoomIn className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
 
               {/* Hierarchy Explorer in Mobile Drawer */}
-              <div className="flex-1 overflow-y-auto space-y-1 no-scrollbar hide-scrollbar">
-                {loading ? (
-                  <div className="flex items-center justify-center py-10 gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
-                    <span className="text-xs font-semibold text-slate-400">Loading hierarchy...</span>
-                  </div>
-                ) : sidebarTree.length === 0 ? (
-                  <p className="text-xs italic text-slate-400 dark:text-slate-500 text-center py-10">Unit tidak ditemukan</p>
-                ) : (
-                  sidebarTree.map(root => (
-                    <SidebarNode
-                      key={root.id}
-                      node={root}
-                      employees={employees}
-                      getGradeInfo={getGradeInfo}
-                      onSelectUnit={node => {
-                        setFocusUnit(node);
-                        setShowMobileSidebar(false); // Close drawer after selection
-                      }}
-                      activeUnitId={focusUnit?.id || null}
-                      searchQuery={sidebarSearch}
-                    />
-                  ))
-                )}
+              <div className="flex-1 overflow-auto no-scrollbar hide-scrollbar">
+                <div
+                  className="space-y-1 pb-6"
+                  style={{
+                    transform: `scale(${mobileSidebarZoom})`,
+                    transformOrigin: 'top left',
+                    width: `${100 / mobileSidebarZoom}%`,
+                  }}
+                >
+                  {loading ? (
+                    <div className="flex items-center justify-center py-10 gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+                      <span className="text-xs font-semibold text-slate-400">Loading hierarchy...</span>
+                    </div>
+                  ) : sidebarTree.length === 0 ? (
+                    <p className="text-xs italic text-slate-400 dark:text-slate-500 text-center py-10">Unit tidak ditemukan</p>
+                  ) : (
+                    sidebarTree.map(root => (
+                      <SidebarNode
+                        key={root.id}
+                        node={root}
+                        employees={employees}
+                        getGradeInfo={getGradeInfo}
+                        onSelectUnit={node => setFocusUnit(node)}
+                        activeUnitId={focusUnit?.id || null}
+                        searchQuery={sidebarSearch}
+                      />
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </>
