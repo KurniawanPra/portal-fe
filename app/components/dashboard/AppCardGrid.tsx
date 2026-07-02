@@ -375,17 +375,36 @@ export default function AppCardGrid({ apps, searchQuery, showUuid = false, colum
                       </span>
 
                       {/* Right: BUKA Pill Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleOpenApp(e, app)}
-                        className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${
-                          isLockedSso 
-                            ? 'bg-slate-200 dark:bg-slate-850 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-700/40' 
-                            : getBrandButtonClass(app.nama)
-                        }`}
-                      >
-                        {isLockedSso ? 'TERKUNCI' : 'BUKA'}
-                      </button>
+                      {isLockedSso ? (
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 bg-slate-200 dark:bg-slate-850 hover:bg-slate-300 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-300/40 dark:border-slate-700/40"
+                        >
+                          TERKUNCI
+                        </button>
+                      ) : app.auth_mode !== 'sso' ? (
+                        <a
+                          href={normalizeAppUrl(app.url)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => {
+                            api.post(`/apps/${app.id}/access`, {}).catch((err) => {
+                              console.error('Gagal mencatat akses aplikasi:', err);
+                            });
+                          }}
+                          className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${getBrandButtonClass(app.nama)}`}
+                        >
+                          BUKA
+                        </a>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenApp(e, app)}
+                          className={`inline-flex items-center justify-center rounded-full px-5 py-1.5 text-xs font-black tracking-wider transition-all duration-200 cursor-pointer shadow-sm hover:shadow hover:scale-[1.03] active:scale-95 focus:outline-none focus:ring-2 ${getBrandButtonClass(app.nama)}`}
+                        >
+                          BUKA
+                        </button>
+                      )}
                     </div>
                   </div>
 

@@ -52,8 +52,15 @@ type FormData = Omit<Aplikasi, 'id' | 'dibuat_pada'>;
 const emptyForm: FormData = { nama: '', url: '', icon: '', auth_mode: 'sso', deskripsi: '', kategori: 'Lainnya', is_active: true, urutan: 1 };
 
 // ─── Shared Input styles ──────────────────────────────────────────────────────
-const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
+const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-[#0a0f1a] px-4 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-555 outline-none focus:border-amber-500/50 focus:ring-2 focus:ring-amber-500/10 transition-all duration-200';
 const labelCls = 'mb-1.5 block text-[10px] font-black uppercase tracking-widest text-slate-555 dark:text-slate-400';
+
+function normalizeAppUrl(url: string) {
+  const trimmed = url.trim();
+  if (!trimmed) return trimmed;
+  if (/^[a-z][a-z\d+\-.]*:\/\//i.test(trimmed) || trimmed.startsWith('/')) return trimmed;
+  return `https://${trimmed}`;
+}
 
 export default function ManajemenAplikasiPage() {
   const [apps, setApps] = useState<Aplikasi[]>([]);
@@ -347,7 +354,7 @@ export default function ManajemenAplikasiPage() {
                     <p className="font-bold text-slate-800 dark:text-slate-100 text-sm">{app.nama}</p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <Globe className="h-3 w-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                      <a href={app.url} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-550 hover:text-amber-550 dark:hover:text-amber-400 transition-colors truncate max-w-[180px]">
+                      <a href={normalizeAppUrl(app.url)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-slate-550 hover:text-amber-550 dark:hover:text-amber-400 transition-colors truncate max-w-[180px]">
                         {app.url}
                       </a>
                     </div>
@@ -380,7 +387,7 @@ export default function ManajemenAplikasiPage() {
               </td>
               <td className="px-5 py-3.5">
                 <div className="flex items-center justify-end gap-1">
-                  <a href={app.url} target="_blank" rel="noopener noreferrer"
+                  <a href={normalizeAppUrl(app.url)} target="_blank" rel="noopener noreferrer"
                     className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] hover:text-slate-800 dark:hover:text-slate-355 transition-all">
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>

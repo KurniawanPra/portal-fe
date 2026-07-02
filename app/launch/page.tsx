@@ -1,31 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState, type ComponentType } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import {
-  AlertCircle,
-  Loader2,
-  ShieldCheck,
-  Clock,
-  BookOpen,
-  FileText,
-  Calendar,
-  Layers,
-  ShoppingBag,
-  HelpCircle
-} from 'lucide-react';
+import { Loader2, AlertCircle, Rocket } from 'lucide-react';
 import { api } from '@/lib/api';
-
-const iconMap: Record<string, ComponentType<{ className?: string }>> = {
-  Clock,
-  BookOpen,
-  ShieldCheck,
-  FileText,
-  Calendar,
-  Layers,
-  ShoppingBag,
-  HelpCircle
-};
 
 interface ApiAplikasi {
   id: string;
@@ -47,16 +25,14 @@ function LaunchContent() {
   const searchParams = useSearchParams();
   const appName = searchParams.get('app') || 'aplikasi';
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [appIcon, setAppIcon] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
-
-    // Set initial icon if passed via search params
-    const initialIcon = searchParams.get('icon') || searchParams.get('app_icon');
-    if (initialIcon) {
-      setAppIcon(initialIcon);
-    }
 
     async function launch() {
       try {
@@ -71,9 +47,6 @@ function LaunchContent() {
           if (!appId) appId = app.id;
           if (!fallbackUrl) fallbackUrl = app.url;
           authMode = app.authMode;
-          if (app.icon && !initialIcon) {
-            setAppIcon(app.icon);
-          }
         } else if (!appId) {
           throw new Error('Data aplikasi tidak lengkap. Silakan buka aplikasi dari dashboard portal.');
         }
@@ -103,39 +76,45 @@ function LaunchContent() {
     };
   }, [appName, searchParams]);
 
-  const renderIcon = () => {
-    if (errorMsg) return <AlertCircle className="h-7 w-7" />;
-    
-    if (appIcon) {
-      const isCustomIcon = appIcon.includes('/') || appIcon.includes('.');
-      if (isCustomIcon) {
-        const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001';
-        const imageUrl = appIcon.startsWith('http') || appIcon.startsWith('/') 
-          ? appIcon 
-          : `${backendUrl}/uploads/${appIcon}`;
-        return <img src={imageUrl} alt={appName} className="h-10 w-10 object-contain" />;
-      }
-      const IconComp = iconMap[appIcon] || ShieldCheck;
-      return <IconComp className="h-7 w-7" />;
-    }
-    
-    return;
-  };
-
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-white to-amber-50/50 px-6 text-slate-900 dark:from-[#0e1118] dark:via-[#121620] dark:to-[#0e1118] dark:text-white">
-      <section className="w-full max-w-sm text-center">
-        <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border shadow-lg ${
-          errorMsg
-            ? 'border-rose-500/20 bg-rose-500/10 text-rose-600 shadow-rose-500/10 dark:text-rose-400'
-            : 'border-amber-500/20 bg-amber-500/10 text-amber-600 shadow-amber-500/10 dark:text-amber-400'
-        }`}>
-          {renderIcon()}
-        </div>
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(4deg); }
+        }
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+          20%, 40%, 60%, 80% { transform: translateX(2px); }
+        }
+        .animate-float {
+          animation: float 2.5s ease-in-out infinite;
+        }
+        .animate-shake {
+          animation: shake 1.2s ease-in-out infinite;
+        }
+      `}</style>
 
-        <h1 className="mt-5 text-xl font-black tracking-tight">
-          {errorMsg ? 'Gagal Membuka Aplikasi' : `Membuka ${appName}`}
-        </h1>
+      <section className={`w-full max-w-sm text-center transform transition-all duration-1000 ease-out ${
+        mounted ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
+      }`}>
+
+        {errorMsg ? (
+          <div className="mt-5 flex flex-col items-center gap-5">
+            <AlertCircle className="h-14 w-14 text-rose-600 dark:text-rose-400 animate-shake" />
+            <h1 className="text-xl font-black tracking-tight text-rose-600 dark:text-rose-400">
+              Gagal Membuka Aplikasi
+            </h1>
+          </div>
+        ) : (
+          <div className="mt-5 flex flex-col items-center gap-5">
+            <Rocket className="h-14 w-14 text-amber-500 animate-float" />
+            <h1 className="text-xl font-black tracking-tight">
+              Membuka {appName}
+            </h1>
+          </div>
+        )}
         <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
           {errorMsg || 'Mempersiapkan sesi SSO dan mengalihkan ke aplikasi tujuan.'}
         </p>
