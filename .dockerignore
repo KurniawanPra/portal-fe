@@ -1,0 +1,30 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js build outputs & cache
+.next
+out
+*.tsbuildinfo
+
+# Runtime Uploads & static storage (di-ignore agar tidak ter-copy ke image build)
+public/uploads
+public/documents
+
+# Environment files
+!.env
+!.env.local
+!.env.production
+!.env.example
+
+# Git & IDE configs
+.git
+.gitignore
+.vscode
+.idea
+.agent
+
+# Docs
+README.md

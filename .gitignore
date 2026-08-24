@@ -1,0 +1,56 @@
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+.idea/
+.vscode/
+.claude/
+.commandcode/
+.agents/
+.agent/
+anti-slop/
+antislop.toml
+DESIGN.md
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env
+.env*.local
+*.env
+!*.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Ignore runtime user uploads in git but preserve folder structure
+/public/uploads/*
+!/public/uploads/.gitkeep
+!/public/uploads/apps/*
+!/public/uploads/employees/*
+
+# AI tooling artifacts
+__pycache__/
+*.pyc
