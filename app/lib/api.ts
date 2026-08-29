@@ -4,15 +4,17 @@
 import { getAccessToken, getRefreshToken, saveTokens, clearTokens } from './auth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export interface ApiResponse<T = unknown> {
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ApiResponse<T = unknown, M = PaginationMeta> {
   success: true;
   data: T;
-  meta?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
+  meta?: M;
 }
 
 export interface ApiError {
@@ -80,10 +82,10 @@ async function tryRefreshToken(): Promise<boolean> {
 }
 
 // ─── Core Fetch ───────────────────────────────────────────────────────────────
-export async function apiFetch<T = unknown>(
+export async function apiFetch<T = unknown, M = PaginationMeta>(
   endpoint: string,
   options: RequestInit = {},
-): Promise<ApiResponse<T>> {
+): Promise<ApiResponse<T, M>> {
   const url = `${BASE}${endpoint}`;
 
   const headers: Record<string, string> = {
@@ -120,7 +122,7 @@ export async function apiFetch<T = unknown>(
           const apiErr = json as ApiError;
           throw new ApiRequestError(apiErr.error || 'Request gagal', apiErr.details);
         }
-        return json as ApiResponse<T>;
+        return json as ApiResponse<T, M>;
       }
     }
 
@@ -160,13 +162,13 @@ export async function apiFetch<T = unknown>(
     throw new ApiRequestError(apiErr.error || 'Request gagal', apiErr.details);
   }
 
-  return json as ApiResponse<T>;
+  return json as ApiResponse<T, M>;
 }
 
 // ─── Convenience Methods ──────────────────────────────────────────────────────
 export const api = {
-  get: <T = unknown>(endpoint: string) =>
-    apiFetch<T>(endpoint, { method: 'GET' }),
+  get: <T = unknown, M = PaginationMeta>(endpoint: string) =>
+    apiFetch<T, M>(endpoint, { method: 'GET' }),
 
   post: <T = unknown>(endpoint: string, body: unknown) => {
     const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;

@@ -93,6 +93,22 @@ interface EmployeeData {
   userIsActive: boolean | null;
 }
 
+interface EmployeeStats {
+  total: number;
+  active: number;
+  inactive: number;
+  male: number;
+  female: number;
+}
+
+interface EmployeeListMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  stats?: EmployeeStats;
+}
+
 // Color palettes
 const STATUS_BADGE = {
   true: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20',
@@ -338,6 +354,13 @@ const applyMasterAlias = (group: keyof typeof MASTER_VALUE_ALIASES, value: strin
 
 export default function ManajemenEmployeePage() {
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
+  const [stats, setStats] = useState<EmployeeStats>({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    male: 0,
+    female: 0,
+  });
   const [employeeLookup, setEmployeeLookup] = useState<ApiEmployee[]>([]);
   const [unitOrganisasis, setUnitOrganisasis] = useState<UnitOrganisasi[]>([]);
   const [loading, setLoading] = useState(true);
@@ -466,7 +489,7 @@ export default function ManajemenEmployeePage() {
       if (filterDateTo) params.set('tanggalMasukTo', filterDateTo);
 
       const [empRes, orgRes, gradeRes, statusRes, eduRes, marRes, agamaRes, penempatanRes] = await Promise.all([
-        api.get<ApiEmployee[]>(`/employees?${params.toString()}`),
+        api.get<ApiEmployee[], EmployeeListMeta>(`/employees?${params.toString()}`),
         api.get<UnitOrganisasi[]>('/org/unit?limit=1000'),
         api.get<any[]>('/master/grade'),
         api.get<any[]>('/master/status-karyawan'),
@@ -474,7 +497,7 @@ export default function ManajemenEmployeePage() {
         api.get<any[]>('/master/status-pernikahan'),
         api.get<any[]>('/master/agama'),
         api.get<any[]>('/master/penempatan-area'),
-      ]);
+      ] as const);
 
       const orgMap = new Map<string, string>();
       (orgRes.data || []).forEach(o => orgMap.set(o.id, o.nama));
@@ -526,6 +549,13 @@ export default function ManajemenEmployeePage() {
 
       setEmployees(mapped);
       setTotalPages(Math.max(1, empRes.meta?.totalPages || 1));
+      setStats(empRes.meta?.stats || {
+        total: empRes.meta?.total || mapped.length,
+        active: mapped.filter(e => e.isActive).length,
+        inactive: mapped.filter(e => !e.isActive).length,
+        male: mapped.filter(e => e.jenisKelamin === 'L').length,
+        female: mapped.filter(e => e.jenisKelamin === 'P').length,
+      });
     } catch (err) {
       showToast('err', err instanceof Error ? err.message : 'Gagal memuat data.');
     } finally {
@@ -1378,11 +1408,6 @@ export default function ManajemenEmployeePage() {
     catch { return s; }
   };
 
-  const activeCount = employees.filter(e => e.isActive).length;
-  const inactiveCount = employees.filter(e => !e.isActive).length;
-  const maleCount = employees.filter(e => e.jenisKelamin === 'L').length;
-  const femaleCount = employees.filter(e => e.jenisKelamin === 'P').length;
-
   return (
     <StaggerContainer className="space-y-6" stagger={0.08} delay={0.04}>
 
@@ -1431,11 +1456,11 @@ export default function ManajemenEmployeePage() {
       <StaggerItem>
       <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 sm:gap-x-6 sm:gap-y-2 bg-white dark:bg-slate-900 px-5 py-4 rounded-xl border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
         {[
-          { label: 'Total', value: employees.length, icon: Users, color: 'text-amber-600 dark:text-amber-400' },
-          { label: 'Aktif', value: activeCount, icon: UserCheck, color: 'text-emerald-650 dark:text-emerald-450' },
-          { label: 'Non-Aktif', value: inactiveCount, icon: UserX, color: 'text-rose-650 dark:text-rose-455' },
-          { label: 'Laki-laki', value: maleCount, icon: Users, color: 'text-blue-650 dark:text-blue-400' },
-          { label: 'Perempuan', value: femaleCount, icon: Users, color: 'text-pink-650 dark:text-pink-400' },
+          { label: 'Total', value: stats.total, icon: Users, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Aktif', value: stats.active, icon: UserCheck, color: 'text-emerald-650 dark:text-emerald-450' },
+          { label: 'Non-Aktif', value: stats.inactive, icon: UserX, color: 'text-rose-650 dark:text-rose-455' },
+          { label: 'Laki-laki', value: stats.male, icon: Users, color: 'text-blue-650 dark:text-blue-400' },
+          { label: 'Perempuan', value: stats.female, icon: Users, color: 'text-pink-650 dark:text-pink-400' },
         ].map((s, i, arr) => {
           const Icon = s.icon;
           return (
