@@ -7,19 +7,12 @@ import {
 import { Map, Marker } from 'pigeon-maps';
 import { ModalPortal } from '@/components/ui/ModalPortal';
 import { api, ApiRequestError } from '@/lib/api';
+import { tileLayer } from '@/lib/mapTiles';
 import {
   inputCls, labelCls, Toast, TableCard, DeleteModal,
   CrudHeader, CrudTable, Pagination, FormModal
 } from './shared';
 import MapPickerModal from './MapPickerModal';
-
-const googleRoadProvider = (x: number, y: number, z: number) => {
-  return `https://mt1.google.com/vt/lyrs=m&x=${x}&y=${y}&z=${z}`;
-};
-
-const googleSatelliteProvider = (x: number, y: number, z: number) => {
-  return `https://mt1.google.com/vt/lyrs=y&x=${x}&y=${y}&z=${z}`;
-};
 
 interface PenempatanArea {
   id: string;
@@ -327,7 +320,7 @@ export default function TabPenempatanArea() {
               className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 hover:bg-slate-100 dark:hover:bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer focus:outline-none"
             >
               <MapPin className="h-4 w-4" />
-              Pilih dari Peta Satelit / Manual
+              Pilih dari Peta / Cari Lokasi
             </button>
           </div>
         </div>
@@ -376,7 +369,7 @@ export default function TabPenempatanArea() {
                       height={350}
                       center={[parseFloat(previewTarget.latitude), parseFloat(previewTarget.longitude)]}
                       zoom={15}
-                      provider={previewMode3D ? googleSatelliteProvider : googleRoadProvider}
+                      {...tileLayer(previewMode3D ? 'satelit' : 'jalan')}
                     >
                       <Marker
                         width={32}
@@ -391,7 +384,7 @@ export default function TabPenempatanArea() {
                     type="button"
                     onClick={() => setPreviewMode3D(!previewMode3D)}
                     className="absolute top-3 right-3 z-20 flex h-8 w-8 items-center justify-center rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-md text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors focus:outline-none cursor-pointer"
-                    title={previewMode3D ? "Ubah ke Peta 2D Jalan" : "Ubah ke Peta Satelit 3D"}
+                    title={previewMode3D ? "Ubah ke Peta Jalan" : "Ubah ke Peta Satelit"}
                   >
                     <Layers className={`h-4 w-4 ${previewMode3D ? 'text-indigo-650' : 'text-slate-500'}`} />
                   </button>
